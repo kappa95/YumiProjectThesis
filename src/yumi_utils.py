@@ -10,6 +10,8 @@ import moveit_msgs.msg
 import geometry_msgs.msg
 import std_msgs.msg
 from yumi_hw.srv import *
+from rospy_message_converter import message_converter
+
 
 RIGHT = 1  # :ID of the right arm
 LEFT = 2  # :ID of the left arm
@@ -333,7 +335,7 @@ def gripper_effort(gripper_id, effort):
 
     pub = rospy.Publisher(pubname, std_msgs.msg.Float64, queue_size=10, latch=True)
     pub.publish(std_msgs.msg.Float64(effort))
-    rospy.sleep(1)
+    rospy.sleep(1.0)
 
 
 # Wrapper for plan_and_move, just position, orientation and arm
@@ -548,6 +550,43 @@ def reset_arm(arm):
         gripper_effort(RIGHT, 0.0)
 
     rospy.sleep(2.0)
+
+
+def move_both(targetL, targetR):
+    # Conversion of the targets into a pose
+    poseL = create_pose_euler(targetL[0], targetL[1], targetL[2], targetL[3], targetL[4], targetL[5])
+    poseR = create_pose_euler(targetR[0], targetR[1], targetR[2], targetR[3], targetR[4], targetR[5])
+    # Plan for the single arm
+    planL = group_l.plan(poseL)
+    planR = group_r.plan(poseR)
+    # Conversion of the plan messages into a dictionary
+    plan_L = message_converter.convert_ros_message_to_dictionary(planL)
+    plan_R = message_converter.convert_ros_message_to_dictionary(planR)
+    # Take all the points of the joints L and R
+    points_L = plan_L['joint_trajectory']['points']
+    points_R = plan_R['joint_trajectory']['points']
+    # Extract the lists of the lists of joints
+    joints_L = [i['positions'] for i in points_L if 'positions' in i]
+    joints_R = [i['positions'] for i in points_R if 'positions' in i]
+    # Check that the "discretization" of the joint positions is the same
+    rospy.loginfo('The number of points for the left arm: {}'.format(len(joints_L)))
+    rospy.loginfo('The number of points for the right arm: {}'.format(len(joints_R)))
+    if len(joints_L) is len(joints_R):
+        for i, j in joints_L, joints_R:
+            rospy.loginfo(i)
+            rospy.loginfo(j)
+            group_both.set_joint_value_target(i + j)
+            group_both.go(wait=True)
+    elif len(joints_L) != len(joints_R):
+        # Used zip for iterate on the shortest list
+        for (i, j) in zip(joints_L, joints_R):
+            rospy.loginfo(i)
+            rospy.loginfo(j)
+            group_both.set_joint_value_target(i + j)
+            group_both.go(wait=True)
+            rospy.sleep(0.1)
+    rospy.sleep(2.0)
+    # It is missing the rest of the motion, let's see...
 
 
 # Resets the YuMi to a predetermined position

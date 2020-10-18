@@ -237,6 +237,12 @@ def run():
     rospy.loginfo('print the LEFT joints values:')
     rospy.loginfo(yumi.get_current_joint_values(yumi.LEFT))
 
+    # Prepare a motion with 2 arms together
+    rospy.loginfo('Prepare a motion with 2 arms together')
+    p2_L = [0.30000, 0.30000, 0.38000, 0, pi, 0]
+    p2_R = [0.31500, -0.20200, 0.20000, 0, pi, pi]
+    yumi.move_both(p2_L, p2_R)
+
 
 if __name__ == '__main__':
     try:
