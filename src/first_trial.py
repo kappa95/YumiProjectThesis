@@ -254,5 +254,3 @@ if __name__ == '__main__':
         pass
     except rospy.ROSException:
         print('exception of ROS')
-    except rospy.ROSInterruptException:
-        print('Altra eccezione')
