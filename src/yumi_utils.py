@@ -579,14 +579,21 @@ def move_both(targetL, targetR):
             group_both.go(wait=True)
     elif len(joints_L) != len(joints_R):
         # Used zip for iterate on the shortest list
-        for (i, j) in zip(joints_L, joints_R):
+        for i, j in zip(joints_L, joints_R):
             rospy.loginfo(i)
             rospy.loginfo(j)
             group_both.set_joint_value_target(i + j)
             group_both.go(wait=True)
-            rospy.sleep(0.1)
+        # TODO: This will remove the synchronism :( => find a new solution
+        if len(joints_L) < len(joints_R):
+            for i in joints_R[len(joints_L):]:
+                group_r.set_joint_value_target(i)
+                group_r.go(wait=True)
+        else:
+            for i in joints_L[len(joints_R):]:
+                group_l.set_joint_value_target(i)
+                group_l.go(wait=True)
     rospy.sleep(2.0)
-    # It is missing the rest of the motion, let's see...
 
 
 # Resets the YuMi to a predetermined position
