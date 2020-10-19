@@ -553,6 +553,12 @@ def reset_arm(arm):
 
 
 def move_both(targetL, targetR):
+    """
+    Plan and Motion of both arm in the same time given the poses
+    :param targetL: Vector for the left arm: x,y,z position and the r,p,y Euler angles
+    :param targetR: Vector for the right arm: x,y,z position and the r,p,y Euler angles
+    :return: Nothing
+    """
     # Conversion of the targets into a pose
     poseL = create_pose_euler(targetL[0], targetL[1], targetL[2], targetL[3], targetL[4], targetL[5])
     poseR = create_pose_euler(targetR[0], targetR[1], targetR[2], targetR[3], targetR[4], targetR[5])
