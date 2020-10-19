@@ -576,6 +576,7 @@ def move_both(targetL, targetR):
     # Check that the "discretization" of the joint positions is the same
     rospy.loginfo('The number of points for the left arm: {}'.format(len(joints_L)))
     rospy.loginfo('The number of points for the right arm: {}'.format(len(joints_R)))
+    # FixMe: the set of points is discretized at each step
     if len(joints_L) is len(joints_R):
         for i, j in joints_L, joints_R:
             # rospy.loginfo(i)
