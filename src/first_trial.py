@@ -112,8 +112,6 @@ def run():
     # Reset pose
     rospy.loginfo('Reset pose')
     yumi.reset_pose()
-    yumi.reset_arm(yumi.LEFT)
-    yumi.reset_arm(yumi.RIGHT)
     rospy.sleep(2.0)
 
     rospy.loginfo('La posizione e\':')
@@ -150,11 +148,12 @@ def run():
 
     # Going to the Target position with z height of 10 cm
     rospy.loginfo('Going to the target position with z at the height of 10cm')
-    p_target[2] -= 0.200
+    p_target[1] -= 0.01000
+    p_target[2] -= 0.20000
     rospy.sleep(0.1)
     # Go to the position
     move_and_grasp(yumi.RIGHT, p_target, 0)
-    rospy.sleep(1.0)
+    rospy.sleep(0.5)
 
     # Going closer
     p_target[2] = z_contact_desk + 0.005
@@ -164,7 +163,7 @@ def run():
 
     # Go to the position and close the gripper
     move_and_grasp(yumi.RIGHT, p_target, 15.0)
-    rospy.sleep(1.0)
+    rospy.sleep(0.5)
 
     rospy.loginfo('La posa nel gripping e\'')
     actual_pose = yumi.get_current_pose(yumi.RIGHT)
@@ -177,7 +176,7 @@ def run():
 
     # Raising in z
     rospy.loginfo('Raising in z with gripper closed')
-    p_target[2] += 0.200
+    p_target[2] += 0.20000
     # Increasing the speed from 10% to 25%
     fraction = 1.0
     rospy.loginfo('Changing the speed to {}'.format(fraction))
@@ -186,7 +185,7 @@ def run():
     move_and_grasp(yumi.RIGHT, p_target, 15.0)
     rospy.sleep(1.0)
 
-    # increasing the height and orientate the arm in horizontal
+    # increasing the height and orientate the right arm in horizontal
     p1_R = p_target
     p1_R[0] += 0.150
     p1_R[1] = -z_gripper
@@ -222,8 +221,16 @@ def run():
     # Open the gripper of the Left Arm
     open_grippers(yumi.LEFT)
 
-    # Allineamento del braccio sinistro su quello destro
+    # Allineamento del braccio sinistro rispetto al destro
     rospy.loginfo('Allineamento del braccio sinistro su quello destro')
+    p1_L[:3] = p1_R[:3]
+    p1_L[1] += 0.200 + 2*z_gripper
+    p1_L[2] += 0.020
+    yumi.change_speed(yumi.LEFT, 0.75)
+    yumi.go_to_simple(p1_L[0], p1_L[1], p1_L[2], p1_L[3], p1_L[4], p1_L[5], yumi.LEFT)
+
+    # Avvicinamento del braccio sinistro su quello destro
+    rospy.loginfo('Avvicinamento del braccio sinistro su quello destro')
     p1_L[:3] = p1_R[:3]
     p1_L[1] += 2*z_gripper
     p1_L[2] += 0.020
@@ -248,6 +255,13 @@ def run():
     p1_L[1] += 0.10000
     yumi.change_speed(yumi.LEFT, 0.10)
     yumi.go_to_simple(p1_L[0], p1_L[1], p1_L[2], p1_L[3], p1_L[4], p1_L[5], yumi.LEFT)
+
+    # Readings
+
+    rospy.loginfo('reading of the left arm:')
+    rospy.loginfo(yumi.get_current_pose(yumi.LEFT))
+    rospy.loginfo('reading of the right arm:')
+    rospy.loginfo(yumi.get_current_pose(yumi.RIGHT))
 
     # Prepare a motion with 2 arms together
     rospy.loginfo('Prepare a motion with 2 arms together')
