@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 
-import sys
-import copy
+# import sys
+# import copy
 import rospy
 import moveit_commander
 import yumi_utils as yumi
-import moveit_msgs.msg
-import geometry_msgs.msg
-from std_srvs.srv import Empty
+# import moveit_msgs.msg
+# import geometry_msgs.msg
+# from std_srvs.srv import Empty
 from math import pi
-import time
+# import time
 
 
 # Import the rounded pi.
@@ -26,7 +26,7 @@ def close_grippers(arm):
     :returns: Nothing
     :rtype: None
     """
-    yumi.gripper_effort(arm, 15.0)
+    yumi.gripper_effort(arm, 20.0)
     yumi.gripper_effort(arm, 0.0)
 
 
@@ -47,7 +47,7 @@ def open_grippers(arm):
 def move_and_grasp(arm, pose_ee, grip_effort):
     try:
         yumi.traverse_path([pose_ee], arm, 10)
-    except Exception:
+    except Exception as e:
         if arm == yumi.LEFT:
             yumi.plan_and_move(
                 yumi.group_l, yumi.create_pose_euler(
@@ -56,6 +56,7 @@ def move_and_grasp(arm, pose_ee, grip_effort):
             yumi.plan_and_move(
                 yumi.group_r, yumi.create_pose_euler(
                     pose_ee[0], pose_ee[1], pose_ee[2], pose_ee[3], pose_ee[4], pose_ee[5]))
+        print(e)
 
     if 20 >= grip_effort >= -20:
         yumi.gripper_effort(arm, grip_effort)
@@ -233,7 +234,7 @@ def run():
     rospy.loginfo('Avvicinamento del braccio sinistro su quello destro')
     p1_L[:3] = p1_R[:3]
     p1_L[1] += 2*z_gripper
-    p1_L[2] += 0.020
+    p1_L[2] += 0.025000
     yumi.change_speed(yumi.LEFT, 0.10)
     yumi.go_to_simple(p1_L[0], p1_L[1], p1_L[2], p1_L[3], p1_L[4], p1_L[5], yumi.LEFT)
 
@@ -248,9 +249,11 @@ def run():
     rospy.loginfo(yumi.get_current_joint_values(yumi.LEFT))
 
     # Exchange of the rubber
+    rospy.sleep(0.2)
     close_grippers(yumi.LEFT)
-    rospy.sleep(0.1)
+    rospy.sleep(0.5)
     open_grippers(yumi.RIGHT)
+    rospy.sleep(1.0)
 
     p1_L[1] += 0.10000
     yumi.change_speed(yumi.LEFT, 0.10)
@@ -265,8 +268,8 @@ def run():
 
     # Prepare a motion with 2 arms together
     rospy.loginfo('Prepare a motion with 2 arms together')
-    p2_L = [0.30000, 0.30000, 0.38000, 0, pi, 0]
-    p2_R = [0.31500, -0.20200, 0.20000, 0, pi, pi]
+    p2_L = [0.30000, 0.30000, 0.30000, 0, pi, 0]
+    p2_R = [0.31500, -0.20200, 0.30000, 0, pi, pi]
     yumi.move_both(p2_L, p2_R)
     close_grippers(yumi.LEFT)
 
