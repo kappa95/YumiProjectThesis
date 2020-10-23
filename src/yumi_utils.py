@@ -20,9 +20,13 @@ PI = 3.1415926  # :Value of PI
 
 table_height = 0.025  # :The height of the upper surface of the table
 table_width = 0.400
-# planner = "RRTstarkConfigDefault"  # Custom planner
-# planner = "ESTkConfigDefault"  # Type of the planner
-planner = "RRTConnectConfigDefault"  # Custom planner
+# Left arm is not moving never...
+# planner = "RRTstarkConfigDefault"  # Asymptotic optimal tree-based planner
+# planner = "ESTkConfigDefault"  # Default: tree-based planner
+# The fastest and better accuracy than EST but strange motions could happens
+# planner = "RRTConnectConfigDefault"  # Tree-based planner
+# Up to now is the best for the first_trial but the slowest
+planner = "PRMstarkConfigDefault"  # Probabilistic Roadmap planner
 planner_L = planner
 
 planning_attempts = 100  # planning attempts
