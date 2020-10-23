@@ -250,7 +250,7 @@ def run():
 
     # Exchange of the rubber
     rospy.sleep(0.2)
-    close_grippers(yumi.LEFT)
+    yumi.gripper_effort(yumi.LEFT, 15.0)
     rospy.sleep(0.5)
     open_grippers(yumi.RIGHT)
     rospy.sleep(1.0)
@@ -271,7 +271,7 @@ def run():
     p2_L = [0.30000, 0.30000, 0.30000, 0, pi, 0]
     p2_R = [0.31500, -0.20200, 0.30000, 0, pi, pi]
     yumi.move_both(p2_L, p2_R)
-    close_grippers(yumi.LEFT)
+    open_grippers(yumi.LEFT)
 
 
 if __name__ == '__main__':
