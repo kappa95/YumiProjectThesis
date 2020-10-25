@@ -8,60 +8,11 @@ import yumi_utils as yumi
 # import moveit_msgs.msg
 # import geometry_msgs.msg
 # from std_srvs.srv import Empty
-from math import pi
 # import time
-
+from math import pi
 
 # Import the rounded pi.
 PI = yumi.PI
-
-
-def close_grippers(arm):
-    """Closes the grippers.
-
-    Closes the grippers with an effort of 15 and then relaxes the effort to 0.
-
-    :param arm: The side to be closed (moveit_utils LEFT or RIGHT)
-    :type arm: int
-    :returns: Nothing
-    :rtype: None
-    """
-    yumi.gripper_effort(arm, 20.0)
-    yumi.gripper_effort(arm, 0.0)
-
-
-def open_grippers(arm):
-    """Opens the grippers.
-
-    Opens the grippers with an effort of -15 and then relaxes the effort to 0.
-
-    :param arm: The side to be opened (moveit_utils LEFT or RIGHT)
-    :type arm: int
-    :returns: Nothing
-    :rtype: None
-    """
-    yumi.gripper_effort(arm, -15.0)
-    yumi.gripper_effort(arm, 0.0)
-
-
-def move_and_grasp(arm, pose_ee, grip_effort):
-    try:
-        yumi.traverse_path([pose_ee], arm, 10)
-    except Exception as e:
-        if arm == yumi.LEFT:
-            yumi.plan_and_move(
-                yumi.group_l, yumi.create_pose_euler(
-                    pose_ee[0], pose_ee[1], pose_ee[2], pose_ee[3], pose_ee[4], pose_ee[5]))
-        elif arm == yumi.RIGHT:
-            yumi.plan_and_move(
-                yumi.group_r, yumi.create_pose_euler(
-                    pose_ee[0], pose_ee[1], pose_ee[2], pose_ee[3], pose_ee[4], pose_ee[5]))
-        print(e)
-
-    if 20 >= grip_effort >= -20:
-        yumi.gripper_effort(arm, grip_effort)
-    else:
-        print("The gripper effort values should be in the range [-20, 20]")
 
 
 def run():
@@ -107,13 +58,13 @@ def run():
     yumi.print_current_joint_states(yumi.LEFT)
 
     # Opening the grippers
-    open_grippers(yumi.LEFT)
-    open_grippers(yumi.RIGHT)
+    yumi.open_grippers(yumi.LEFT)
+    yumi.open_grippers(yumi.RIGHT)
 
     # Reset pose
     rospy.loginfo('Reset pose')
     yumi.reset_pose()
-    rospy.sleep(2.0)
+    # rospy.sleep(2.0)
 
     rospy.loginfo('La posizione e\':')
     rospy.loginfo(yumi.get_current_pose(yumi.LEFT))
@@ -130,13 +81,13 @@ def run():
     print(p_target[2])
     rospy.sleep(0.1)
     # Go to the position
-    move_and_grasp(yumi.RIGHT, p_target, 0.0)
+    yumi.move_and_grasp(yumi.RIGHT, p_target)
     rospy.sleep(1.0)
 
     # Opening the gripper
     rospy.loginfo('Opening the gripper')
-    open_grippers(yumi.RIGHT)
-    rospy.sleep(1.0)
+    yumi.open_grippers(yumi.RIGHT)
+    rospy.sleep(0.5)
 
     # Printing the pose of the right arm
     rospy.loginfo(yumi.get_current_pose(yumi.RIGHT))
@@ -153,8 +104,8 @@ def run():
     p_target[2] -= 0.20000
     rospy.sleep(0.1)
     # Go to the position
-    move_and_grasp(yumi.RIGHT, p_target, 0)
-    rospy.sleep(0.5)
+    yumi.move_and_grasp(yumi.RIGHT, p_target)
+    # rospy.sleep(0.5)
 
     # Going closer
     p_target[2] = z_contact_desk + 0.005
@@ -163,7 +114,7 @@ def run():
     yumi.change_speed(yumi.RIGHT, fraction)
 
     # Go to the position and close the gripper
-    move_and_grasp(yumi.RIGHT, p_target, 15.0)
+    yumi.move_and_grasp(yumi.RIGHT, p_target, 15.0)
     rospy.sleep(0.5)
 
     rospy.loginfo('La posa nel gripping e\'')
@@ -183,7 +134,7 @@ def run():
     rospy.loginfo('Changing the speed to {}'.format(fraction))
     yumi.change_speed(yumi.RIGHT, fraction)
     # Go to the position
-    move_and_grasp(yumi.RIGHT, p_target, 15.0)
+    yumi.move_and_grasp(yumi.RIGHT, p_target)
     rospy.sleep(1.0)
 
     # increasing the height and orientate the right arm in horizontal
@@ -195,11 +146,8 @@ def run():
     p1_R[4] = 0.000
     p1_R[5] = 0.000
     yumi.change_speed(yumi.RIGHT, 0.25)
-    # move_and_grasp(yumi.RIGHT, p_target, 15.0)
-    yumi.go_to_simple(p_target[0], p_target[1], p_target[2],
-                      p_target[3], p_target[4], p_target[5], yumi.RIGHT)
-    yumi.gripper_effort(yumi.RIGHT, 15.0)
-    rospy.sleep(1.0)
+    yumi.move_and_grasp(yumi.RIGHT, p_target)
+    # rospy.sleep(1.0)
 
     # Printing of the pose
     rospy.loginfo('print the current pose')
@@ -220,7 +168,7 @@ def run():
     rospy.sleep(0.5)
 
     # Open the gripper of the Left Arm
-    open_grippers(yumi.LEFT)
+    yumi.open_grippers(yumi.LEFT)
 
     # Allineamento del braccio sinistro rispetto al destro
     rospy.loginfo('Allineamento del braccio sinistro su quello destro')
@@ -252,8 +200,8 @@ def run():
     rospy.sleep(0.2)
     yumi.gripper_effort(yumi.LEFT, 15.0)
     rospy.sleep(0.5)
-    open_grippers(yumi.RIGHT)
-    rospy.sleep(1.0)
+    yumi.open_grippers(yumi.RIGHT)
+    # rospy.sleep(1.0)
 
     p1_L[1] += 0.10000
     yumi.change_speed(yumi.LEFT, 0.10)
@@ -271,7 +219,7 @@ def run():
     p2_L = [0.30000, 0.30000, 0.30000, 0, pi, 0]
     p2_R = [0.31500, -0.20200, 0.30000, 0, pi, pi]
     yumi.move_both(p2_L, p2_R)
-    open_grippers(yumi.LEFT)
+    yumi.open_grippers(yumi.LEFT)
 
 
 if __name__ == '__main__':
