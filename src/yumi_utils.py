@@ -24,9 +24,9 @@ table_width = 0.400  # [m] :The width of the table (x)
 
 # Experiments with planners
 # Left arm is not moving never...
-planner = "RRTstarkConfigDefault"  # Asymptotic optimal tree-based planner
+# planner = "RRTstarkConfigDefault"  # Asymptotic optimal tree-based planner
 # The default suggested
-# planner = "ESTkConfigDefault"  # Default: tree-based planner
+planner = "ESTkConfigDefault"  # Default: tree-based planner
 # The fastest and better accuracy than EST but strange motions could happens
 # planner = "RRTConnectConfigDefault"  # Tree-based planner
 # Up to now is the best for the first_trial but the slowest
