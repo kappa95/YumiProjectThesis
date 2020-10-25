@@ -18,18 +18,19 @@ LEFT = 2  # :ID of the left arm
 BOTH = 3  # :ID of both_arms
 PI = 3.1415926  # :Value of PI
 
-table_height = 0.025  # :The height of the upper surface of the table
-table_width = 0.400
+table_height = 0.025  # [m] :The height of the upper surface of the table (z)
+table_length = 1.200  # [m] :The width of the table (y)
+table_width = 0.400  # [m] :The width of the table (x)
 
 # Experiments with planners
 # Left arm is not moving never...
-# planner = "RRTstarkConfigDefault"  # Asymptotic optimal tree-based planner
+planner = "RRTstarkConfigDefault"  # Asymptotic optimal tree-based planner
 # The default suggested
 # planner = "ESTkConfigDefault"  # Default: tree-based planner
 # The fastest and better accuracy than EST but strange motions could happens
 # planner = "RRTConnectConfigDefault"  # Tree-based planner
 # Up to now is the best for the first_trial but the slowest
-planner = "PRMstarkConfigDefault"  # Probabilistic Roadmap planner
+# planner = "PRMstarkConfigDefault"  # Probabilistic Roadmap planner
 planner_L = planner
 
 planning_attempts = 100  # planning attempts
@@ -40,6 +41,9 @@ global group_r  # :The move group for the right arm
 global group_both  # :The move group for using both arms at once
 global robot  # :The RobotCommander() from MoveIt!
 global scene  # :The PlanningSceneInterface from MoveIt!
+# Defining the workspace [min X, min Y, min Z, max X, max Y, max Z]
+ws_R = [0.000, -table_length/2, table_height, 0.600, 0.200, 0.593]
+ws_L = [0.000, -0.200, table_height, 0.600, table_length, 0.593]
 
 
 # Initializes the package to interface with MoveIt!
@@ -92,10 +96,12 @@ def init_Moveit():
     group_l.set_planner_id(planner_L)
     group_l.set_pose_reference_frame("yumi_body")
 
+    # Setting the workspace
+    group_l.set_workspace(ws=ws_L)
+
     # Replanning
     group_l.allow_replanning(True)
-    group_l.set_goal_position_tolerance(0.005)
-    group_l.set_goal_orientation_tolerance(0.005)
+    group_l.set_goal_tolerance(0.005)
     group_l.set_num_planning_attempts(planning_attempts)
     group_l.set_planning_time(planning_time)
     print('For the Left arm the end effector link is')
@@ -107,10 +113,13 @@ def init_Moveit():
     # Type of planner
     group_r.set_planner_id(planner)
     group_r.set_pose_reference_frame("yumi_body")
+
+    # Setting the workspace
+    group_r.set_workspace(ws=ws_R)
+
     # Replanning
     group_r.allow_replanning(True)
-    group_r.set_goal_position_tolerance(0.005)
-    group_r.set_goal_orientation_tolerance(0.005)
+    group_r.set_goal_tolerance(0.005)
     group_r.set_num_planning_attempts(planning_attempts)
     group_r.set_planning_time(planning_time)
     print('For the Right arm the end effector link is')
@@ -126,8 +135,7 @@ def init_Moveit():
     group_both.set_pose_reference_frame("yumi_body")
     # Replanning
     group_both.allow_replanning(True)
-    group_both.set_goal_position_tolerance(0.005)
-    group_both.set_goal_orientation_tolerance(0.005)
+    group_both.set_goal_tolerance(0.005)
     group_both.set_num_planning_attempts(planning_attempts)
     group_both.set_planning_time(planning_time)
 
@@ -344,6 +352,34 @@ def gripper_effort(gripper_id, effort):
     rospy.sleep(1.0)
 
 
+def close_grippers(arm):
+    """Closes the grippers.
+
+    Closes the grippers with an effort of 15 and then relaxes the effort to 0.
+
+    :param arm: The side to be closed (moveit_utils LEFT or RIGHT)
+    :type arm: int
+    :returns: Nothing
+    :rtype: None
+    """
+    gripper_effort(arm, 15.0)
+    gripper_effort(arm, 0.0)
+
+
+def open_grippers(arm):
+    """Opens the grippers.
+
+    Opens the grippers with an effort of -15 and then relaxes the effort to 0.
+
+    :param arm: The side to be opened (moveit_utils LEFT or RIGHT)
+    :type arm: int
+    :returns: Nothing
+    :rtype: None
+    """
+    gripper_effort(arm, -15.0)
+    gripper_effort(arm, 0.0)
+
+
 # Wrapper for plan_and_move, just position, orientation and arm
 def go_to_simple(x_p, y_p, z_p, roll_rad, pitch_rad, yaw_rad, arm):
     """Set effector position
@@ -422,7 +458,6 @@ def plan_path(points, arm, planning_tries=500):
     rospy.loginfo(points)
 
     waypoints = []
-    # waypoints.append(cur_arm.get_current_pose().pose)
     for point in points:
         wpose = create_pose_euler(point[0], point[1], point[2], point[3], point[4], point[5])
         waypoints.append(copy.deepcopy(wpose))
@@ -440,7 +475,6 @@ def plan_path(points, arm, planning_tries=500):
         if fraction == 1.0:
             plan = cur_arm.retime_trajectory(robot.get_current_state(), plan, 1.0)
             return plan
-            # r = cur_arm.execute(plan)
 
     if fraction < 1.0:
         rospy.logerr('Only managed to calculate ' + str(fraction * 100) + '% of the path!')
@@ -513,7 +547,30 @@ def plan_and_move(move_group, target):
     # changed
     move_group.execute(plan, wait=True)
     move_group.stop()
-    rospy.sleep(3.0)
+    # rospy.sleep(3.0)
+
+
+def move_and_grasp(arm, pose_ee, grip_effort=None):
+    try:
+        rospy.logdebug('move and grasp -> traverse_path')
+        traverse_path([pose_ee], arm, 500)
+    except Exception as e:
+        if arm == LEFT:
+            plan_and_move(
+                group_l, create_pose_euler(
+                    pose_ee[0], pose_ee[1], pose_ee[2], pose_ee[3], pose_ee[4], pose_ee[5]))
+        elif arm == RIGHT:
+            plan_and_move(
+                group_r, create_pose_euler(
+                    pose_ee[0], pose_ee[1], pose_ee[2], pose_ee[3], pose_ee[4], pose_ee[5]))
+        print(e)
+
+    if 20 >= grip_effort >= -20:
+        gripper_effort(arm, grip_effort)
+    elif grip_effort is None:
+        pass
+    else:
+        print("The gripper effort values should be in the range [-20, 20]")
 
 
 # Resets a single arm to the reset pose
@@ -585,8 +642,12 @@ def move_both(targetL, targetR):
     rospy.loginfo('The number of points for the right arm: {}'.format(len(joints_R)))
 
     # Try for having only the inverse kinematics
-    group_both.set_joint_value_target(joints_L[-1] + joints_R[-1])
-    group_both.go(wait=True)
+    if not joints_L or not joints_R:
+        raise Exception('The trajectory is bad')
+    else:
+        group_both.set_joint_value_target(joints_L[-1] + joints_R[-1])
+        group_both.go(wait=True)
+        group_both.stop()
     # # FixMe: the set of points is discretized at each step
     # if len(joints_L) is len(joints_R):
     #     for i, j in joints_L, joints_R:
