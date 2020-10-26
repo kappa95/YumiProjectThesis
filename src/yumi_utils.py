@@ -677,6 +677,23 @@ def move_both(targetL, targetR):
     #             group_l.go(wait=True)
 
 
+def Start_State_To_Current_State(arm):
+    """
+
+    Set the starting state for planning to be that reported by the robot's joint state publication.
+
+    :param arm: LEFT or RIGHT arm of the yumi
+    :return: Nothing
+    """
+
+    if arm == LEFT:
+        group_l.set_start_state_to_current_state()
+    elif arm == RIGHT:
+        group_r.set_start_state_to_current_state()
+    else:
+        group_both.set_start_state_to_current_state()
+
+
 # Resets the YuMi to a predetermined position
 def reset_pose():
     """Resets YuMi

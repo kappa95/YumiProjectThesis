@@ -62,6 +62,7 @@ def run():
     yumi.open_grippers(yumi.RIGHT)
 
     # Reset pose
+    yumi.Start_State_To_Current_State(yumi.BOTH)
     rospy.loginfo('Reset pose')
     yumi.reset_pose()
     # rospy.sleep(2.0)
