@@ -4,9 +4,8 @@ import sys
 import copy
 import rospy
 import tf.transformations
-import moveit_commander
 from moveit_commander import *
-import moveit_msgs.msg
+from moveit_msgs.msg import *
 import geometry_msgs.msg
 import std_msgs.msg
 from yumi_hw.srv import *
@@ -63,10 +62,13 @@ def init_Moveit():
     global robot
     global scene
     print("####################################     Start Initialization     ####################################")
-    moveit_commander.roscpp_initialize(sys.argv)
+    roscpp_initialize(sys.argv)
+    # moveit_commander.roscpp_initialize(sys.argv)
 
-    robot = moveit_commander.RobotCommander()
-    scene = moveit_commander.PlanningSceneInterface()
+    # robot = moveit_commander.RobotCommander()
+    robot = RobotCommander()
+    # scene = moveit_commander.PlanningSceneInterface()
+    scene = PlanningSceneInterface()
     mpr = moveit_msgs.msg.MotionPlanRequest()
     rospy.sleep(1.0)
 
@@ -91,7 +93,8 @@ def init_Moveit():
     scene.add_box("table", table_pose, size=(table_width, 1.2, table_height))
 
     # Left arm
-    group_l = moveit_commander.MoveGroupCommander("left_arm")
+    # group_l = moveit_commander.MoveGroupCommander("left_arm")
+    group_l = MoveGroupCommander("left_arm")
     # Type of planner
     group_l.set_planner_id(planner_L)
     group_l.set_pose_reference_frame("yumi_body")
@@ -109,7 +112,8 @@ def init_Moveit():
     print(group_l.get_planning_frame())
 
     # Right arm
-    group_r = moveit_commander.MoveGroupCommander("right_arm")
+    # group_r = moveit_commander.MoveGroupCommander("right_arm")
+    group_r = MoveGroupCommander("right_arm")
     # Type of planner
     group_r.set_planner_id(planner)
     group_r.set_pose_reference_frame("yumi_body")
@@ -127,7 +131,8 @@ def init_Moveit():
     print(group_l.get_planning_frame())
 
     # Both arms
-    group_both = moveit_commander.MoveGroupCommander("both_arms")
+    # group_both = moveit_commander.MoveGroupCommander("both_arms")
+    group_both = MoveGroupCommander("both_arms")
     # Type of planner
     group_both.set_planner_id(planner_L)
 
@@ -138,6 +143,22 @@ def init_Moveit():
     group_both.set_goal_tolerance(0.005)
     group_both.set_num_planning_attempts(planning_attempts)
     group_both.set_planning_time(planning_time)
+
+    # TODO: Test sui Constraints
+    # Test sui constraints, da rifattorizzare e applicare
+    oc = OrientationConstraint()
+    oc.link_name = "gripper_base_l"
+    oc.header.frame_id = "yumi_base"
+    oc.orientation.w = 1.0
+    oc.weight = 1.0
+    # Classe Constraints
+    test_constraints = Constraints()
+    test_constraints.orientation_constraints = oc
+    # FIXME: Da Rivedere sto pezzo: #
+    #  http://docs.ros.org/en/kinetic/api/moveit_tutorials/html/doc/move_group_interface/move_group_interface_tutorial.html#planning-with-path-constraints
+    # Classe RobotState
+    RS = RobotState()
+    start_state = group_l.set_start_state_to_current_state()
 
     display_trajectory_publisher = rospy.Publisher(
         '/move_group/display_planned_path', moveit_msgs.msg.DisplayTrajectory, queue_size=20)
