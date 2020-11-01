@@ -144,21 +144,21 @@ def init_Moveit():
     group_both.set_num_planning_attempts(planning_attempts)
     group_both.set_planning_time(planning_time)
 
-    # TODO: Test sui Constraints
-    # Test sui constraints, da rifattorizzare e applicare
-    oc = OrientationConstraint()
-    oc.link_name = "gripper_base_l"
-    oc.header.frame_id = "yumi_base"
-    oc.orientation.w = 1.0
-    oc.weight = 1.0
-    # Classe Constraints
-    test_constraints = Constraints()
-    test_constraints.orientation_constraints = oc
-    # FIXME: Da Rivedere sto pezzo: #
-    #  http://docs.ros.org/en/kinetic/api/moveit_tutorials/html/doc/move_group_interface/move_group_interface_tutorial.html#planning-with-path-constraints
-    # Classe RobotState
-    RS = RobotState()
-    start_state = group_l.set_start_state_to_current_state()
+    # # TODO: Test sui Constraints
+    # # Test sui constraints, da rifattorizzare e applicare
+    # oc = OrientationConstraint()
+    # oc.link_name = "gripper_base_l"
+    # oc.header.frame_id = "yumi_base"
+    # oc.orientation.w = 1.0
+    # oc.weight = 1.0
+    # # Classe Constraints
+    # test_constraints = Constraints()
+    # test_constraints.orientation_constraints = oc
+    # # FIXME: Da Rivedere sto pezzo: #
+    # #  http://docs.ros.org/en/kinetic/api/moveit_tutorials/html/doc/move_group_interface/move_group_interface_tutorial.html#planning-with-path-constraints
+    # # Classe RobotState
+    # RS = RobotState()
+    # start_state = group_l.set_start_state_to_current_state()
 
     display_trajectory_publisher = rospy.Publisher(
         '/move_group/display_planned_path', moveit_msgs.msg.DisplayTrajectory, queue_size=20)
