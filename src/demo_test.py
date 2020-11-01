@@ -9,7 +9,7 @@ import std_msgs.msg
 import geometry_msgs.msg
 from yumi_utils import PI
 from yumi_hw.srv import *
-from yumi_utils import gripper_effort, reset_pose
+from yumi_utils import gripper_effort
 from tf.transformations import quaternion_from_euler
 
 
@@ -22,6 +22,8 @@ BOTH = 3  # :ID of both_arms
 table_height = 0.025  # [m] :The height of the upper surface of the table (z)
 table_length = 1.200  # [m] :The width of the table (y)
 table_width = 0.400  # [m] :The width of the table (x)
+# Length of the Gripper from datasheet
+z_gripper = 0.136  # [m]
 
 # Choice of the planners
 # planner = "RRTstarkConfigDefault"  # Asymptotic optimal tree-based planner
