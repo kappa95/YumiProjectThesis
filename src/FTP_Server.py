@@ -24,12 +24,13 @@ def ftp_connection():
             ftp.login(ftp_user, ftp_pwd)
             ftp.retrbinary("RETR " + filename, open(filename, 'wb').write)
         except ftplib.all_errors as e:
-            print('FTP errors: ')
-            print(e)
+            rospy.loginfo('FTP errors: ')
+            rospy.logerr(e)
 
 
 def main():
     rospy.init_node('YumiCamerasNode', anonymous=False)
+    rospy.loginfo('Initialized the YumiCamerasNode')
     right_cam_pub = rospy.Publisher("/yumi/right_cam_image", Image, queue_size=1)
     rate = rospy.Rate(0.5)
     while not rospy.is_shutdown():
@@ -38,7 +39,7 @@ def main():
             im = cv2.imread(filename)
             right_cam_pub.publish(bridge.cv2_to_imgmsg(im, pixels_encoding))
         except CvBridgeError as cve:
-            rospy.logerr('CVBridgeError:')
+            rospy.loginfo('CVBridgeError:')
             rospy.logerr(cve)
         rate.sleep()
 
