@@ -15,6 +15,7 @@ results = scanner.scan(im)
 if not results:
     print('oggetto nullo')
 else:
-    for result in results:
-        print(result)
+    print(results.pop().data)
+    # for result in results:
+    #     print(result)
 
