@@ -32,7 +32,7 @@ def main():
     rospy.init_node('YumiCamerasNode', anonymous=False)
     rospy.loginfo('Initialized the YumiCamerasNode')
     right_cam_pub = rospy.Publisher("/yumi/right_cam_image", Image, queue_size=1)
-    rate = rospy.Rate(0.5)
+    rate = rospy.Rate(2)
     while not rospy.is_shutdown():
         ftp_connection()
         try:

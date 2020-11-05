@@ -15,12 +15,14 @@ class Nodo:
         self.loop_rate = rospy.Rate(10)
         self.pub = rospy.Publisher('Barcode', String, queue_size=1)
         self.Scanner = zbar.Scanner()
-        # self.window = cv2.namedWindow('output', cv2.WINDOW_NORMAL)
         rospy.Subscriber('yumi/right_cam_image', Image, self.callback)
 
     def callback(self, msg):
-        rospy.loginfo('Image Received')
-        self.image = self.br.imgmsg_to_cv2(msg, desired_encoding='mono8')
+        try:
+            self.image = self.br.imgmsg_to_cv2(msg, desired_encoding='mono8')
+            rospy.loginfo('Image Received')
+        except CvBridgeError as e:
+            print(e)
 
     def start(self):
         rospy.loginfo('Start reading')
@@ -28,18 +30,16 @@ class Nodo:
             if self.image is not None:
                 rospy.loginfo('Scanning of the barcode')
                 results = self.Scanner.scan(self.image)
-                if results is not None:
-                    for results in results:
-                        barcode = results.data
-                        if barcode is not None:
-                            rospy.loginfo(barcode)
-                            rospy.loginfo('Publish of the barcode')
-                            self.pub.publish(barcode)
-                            exit(200)
+                if results:
+                    barcode = results.pop().data
+                    rospy.loginfo(barcode)
+                    rospy.loginfo('Publish of the barcode')
+                    self.pub.publish(barcode)
+                    # exit(200)
                 else:
                     rospy.logerr('No barcodes readed')
             else:
-                rospy.logerr('No Images Readed')
+                rospy.logerr('No Images Readed:')
             self.loop_rate.sleep()
 
 
