@@ -1,5 +1,4 @@
 import zbar
-import numpy as np
 import cv2
 
 filename = 'image.bmp'
