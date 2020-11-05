@@ -44,7 +44,7 @@ class Nodo:
 
 
 if __name__ == '__main__':
-    rospy.loginfo('inizializzazione del nodo')
+    rospy.loginfo('Inizializzazione del nodo')
     rospy.init_node('BarcodeReader', anonymous=False)
     node = Nodo()
     node.start()
