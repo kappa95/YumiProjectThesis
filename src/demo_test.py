@@ -5,7 +5,7 @@ import sys
 import copy
 from moveit_msgs.msg import *
 from moveit_commander import *
-import std_msgs.msg
+from std_msgs.msg import String
 import geometry_msgs.msg
 from yumi_utils import PI
 from yumi_hw.srv import *
@@ -38,64 +38,64 @@ planning_time = 50  # [s] Planning time for computation
 ws_R = [0.000, -table_length/2, table_height, 0.600, 0.200, 0.593]
 ws_L = [0.000, -0.200, table_height, 0.600, table_length, 0.593]
 
+# Initialization of Moveit
+rospy.loginfo('Starting the Initialization')
+roscpp_initialize(sys.argv)
+robot = RobotCommander()
+scene = PlanningSceneInterface()
+mpr = MotionPlanRequest()
+rospy.sleep(1.0)
+
+# Left arm
+group_l = MoveGroupCommander("left_arm")
+# Type of planner
+group_l.set_planner_id(planner)
+group_l.set_pose_reference_frame("yumi_body")
+
+# Setting the workspace
+group_l.set_workspace(ws=ws_L)
+
+# Replanning
+group_l.allow_replanning(True)
+group_l.set_goal_tolerance(0.005)
+group_l.set_num_planning_attempts(planning_attempts)
+group_l.set_planning_time(planning_time)
+
+# Right arm
+group_r = MoveGroupCommander("right_arm")
+# Type of planner
+group_r.set_planner_id(planner)
+group_r.set_pose_reference_frame("yumi_body")
+
+# Setting the workspace
+group_r.set_workspace(ws=ws_R)
+
+# Replanning
+group_r.allow_replanning(True)
+group_r.set_goal_tolerance(0.005)
+group_r.set_num_planning_attempts(planning_attempts)
+group_r.set_planning_time(planning_time)
+print(group_r.get_joints())
+# Both arms
+group_both = MoveGroupCommander("both_arms")
+# Type of planner
+group_both.set_planner_id(planner)
+
+# Pose reference frame is the yumi_body
+group_both.set_pose_reference_frame("yumi_body")
+# Replanning
+group_both.allow_replanning(True)
+group_both.set_goal_tolerance(0.005)
+group_both.set_num_planning_attempts(planning_attempts)
+group_both.set_planning_time(planning_time)
+
+# Publish the trajectory on Rviz
+rospy.Publisher('/move_group/display_planned_path', moveit_msgs.msg.DisplayTrajectory, queue_size=20)
+rospy.sleep(1.0)
+rospy.loginfo('Finished init')
+
 
 def run():
-    # Initialization of Moveit
-    rospy.loginfo('Starting the Initialization')
-    roscpp_initialize(sys.argv)
-    robot = RobotCommander()
-    scene = PlanningSceneInterface()
-    mpr = MotionPlanRequest()
-    rospy.sleep(1.0)
-
-    # Left arm
-    group_l = MoveGroupCommander("left_arm")
-    # Type of planner
-    group_l.set_planner_id(planner)
-    group_l.set_pose_reference_frame("yumi_body")
-
-    # Setting the workspace
-    group_l.set_workspace(ws=ws_L)
-
-    # Replanning
-    group_l.allow_replanning(True)
-    group_l.set_goal_tolerance(0.005)
-    group_l.set_num_planning_attempts(planning_attempts)
-    group_l.set_planning_time(planning_time)
-
-    # Right arm
-    group_r = MoveGroupCommander("right_arm")
-    # Type of planner
-    group_r.set_planner_id(planner)
-    group_r.set_pose_reference_frame("yumi_body")
-
-    # Setting the workspace
-    group_r.set_workspace(ws=ws_R)
-
-    # Replanning
-    group_r.allow_replanning(True)
-    group_r.set_goal_tolerance(0.005)
-    group_r.set_num_planning_attempts(planning_attempts)
-    group_r.set_planning_time(planning_time)
-    print(group_r.get_joints())
-    # Both arms
-    group_both = MoveGroupCommander("both_arms")
-    # Type of planner
-    group_both.set_planner_id(planner)
-
-    # Pose reference frame is the yumi_body
-    group_both.set_pose_reference_frame("yumi_body")
-    # Replanning
-    group_both.allow_replanning(True)
-    group_both.set_goal_tolerance(0.005)
-    group_both.set_num_planning_attempts(planning_attempts)
-    group_both.set_planning_time(planning_time)
-
-    # Publish the trajectory on Rviz
-    rospy.Publisher('/move_group/display_planned_path', moveit_msgs.msg.DisplayTrajectory, queue_size=20)
-    rospy.sleep(1.0)
-    rospy.loginfo('Finished init')
-
     rospy.loginfo('Open the grippers')
     gripper_effort(LEFT, -20.0)
     # Relaxing gripper
@@ -143,7 +143,8 @@ def run():
     # Setting the Orientation constraint
     orientation_constraints = OrientationConstraint()
     orientation_constraints.link_name = "gripper_r_base"
-    orientation_constraints.header.frame_id = "world"
+    orientation_constraints.header.frame_id = "yumi_body"
+    # orientation_constraints.header.frame_id = "world"
     orientation_constraints.orientation = copy.deepcopy(pose_target.orientation)
     orientation_constraints.absolute_x_axis_tolerance = 0.1
     orientation_constraints.absolute_y_axis_tolerance = 0.1
