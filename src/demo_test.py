@@ -74,7 +74,7 @@ group_r.set_workspace(ws=ws_R)
 
 # Replanning
 group_r.allow_replanning(True)
-group_r.set_goal_tolerance(0.005)
+group_r.set_goal_tolerance(0.0005)
 group_r.set_num_planning_attempts(planning_attempts)
 group_r.set_planning_time(planning_time)
 
@@ -117,7 +117,9 @@ home_joints = [-1.407075546891484, -2.0968645586174586, 0.7081984499895384, 0.29
                -9.50240857688911e-05, -5.2985829942286955e-05, -3.199690151589607e-05]
 
 length_tube = 0.125  # [m]
+
 # Points useful: need to compute the pose
+# Rendezvous_picking_point
 rendezvous_picking_point = [0.31500, -0.20200, 0.172 + length_tube, 0, PI, PI]
 rendezvous_picking_pose = Pose()
 rendezvous_picking_pose.position.x = rendezvous_picking_point[0]
@@ -131,6 +133,13 @@ rendezvous_picking_pose.orientation.x = quaternion_rendezvous_picking[0]
 rendezvous_picking_pose.orientation.y = quaternion_rendezvous_picking[1]
 rendezvous_picking_pose.orientation.z = quaternion_rendezvous_picking[2]
 rendezvous_picking_pose.orientation.w = quaternion_rendezvous_picking[3]
+
+# Picking point
+pick = Pose()
+# TODO: Set the points
+pick.position = copy.deepcopy(rendezvous_picking_pose.position)
+pick.position.z -= 0.010
+pick.orientation = copy.deepcopy(rendezvous_picking_pose.orientation)
 
 
 def return_home():
@@ -149,6 +158,25 @@ def picking():
     group_both.set_start_state(state)
     group_r.set_pose_target(rendezvous_picking_pose)
     group_r.go(wait=True)
+    # Set the constraints for the picking:
+    # Setting the Orientation constraint
+    orientation_constraints = OrientationConstraint()
+    orientation_constraints.link_name = "gripper_r_base"
+    orientation_constraints.header.frame_id = "yumi_body"
+    orientation_constraints.orientation = copy.deepcopy(rendezvous_picking_pose.orientation)
+    orientation_constraints.absolute_x_axis_tolerance = 0.1
+    orientation_constraints.absolute_y_axis_tolerance = 0.1
+    orientation_constraints.absolute_z_axis_tolerance = 0.1
+    orientation_constraints.weight = 1.0
+    # Constraints should be a list
+    orientation_constraint_list = [orientation_constraints]
+    # Declaring the object constraints
+    constraint_list = Constraints()
+    constraint_list.orientation_constraints = orientation_constraint_list
+    group_r.set_path_constraints(constraint_list)
+    group_r.set_pose_target(pick)
+    group_r.go(wait=True)
+    rospy.sleep(1.0)
 
 
 def run():
@@ -159,8 +187,8 @@ def run():
     global scene
     global mpr
 
-    # return_home()
-    #
+    return_home()
+    picking()
     # rospy.loginfo('Open the grippers')
     # gripper_effort(LEFT, -20.0)
     # # Relaxing gripper
