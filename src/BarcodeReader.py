@@ -38,6 +38,7 @@ class Nodo:
                     # exit(200)
                 else:
                     rospy.logerr('No barcodes readed')
+                    self.pub.publish(None)
             else:
                 rospy.logerr('No Images Readed:')
             self.loop_rate.sleep()
