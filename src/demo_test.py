@@ -111,10 +111,13 @@ table_pose.pose.position.y = 0.0
 table_pose.pose.position.z = table_height / 2
 scene.add_box("table", table_pose, size=(table_width, 1.2, table_height))
 
-home_joints = [-1.407075546891484, -2.0968645586174586, 0.7081984499895384, 0.29709923791025084,
-               -5.1407035742911944e-05, -7.242136084961714e-05, -5.345358943031897e-05,
-               1.40707559518704, -2.096858749878596, -0.7081717891089125, 0.29710402150605564,
-               -9.50240857688911e-05, -5.2985829942286955e-05, -3.199690151589607e-05]
+home_L = [-0.43694, -1.92055, 0.91644, -1.39025, -1.47587, -0.00296, 0.74193]
+home_R = [0.60619, -2.07638, 0.88233, -1.65315, 1.69564, -0.21209, -0.35038]
+home_joints = home_L + home_R
+# home_joints = [-1.407075546891484, -2.0968645586174586, 0.7081984499895384, 0.29709923791025084,
+#                -5.1407035742911944e-05, -7.242136084961714e-05, -5.345358943031897e-05,
+#                1.40707559518704, -2.096858749878596, -0.7081717891089125, 0.29710402150605564,
+#                -9.50240857688911e-05, -5.2985829942286955e-05, -3.199690151589607e-05]
 
 length_tube = 0.125  # [m]
 
@@ -138,7 +141,7 @@ rendezvous_picking_pose.orientation.w = quaternion_rendezvous_picking[3]
 pick = Pose()
 # TODO: Set the points
 pick.position = copy.deepcopy(rendezvous_picking_pose.position)
-pick.position.z -= 0.010
+pick.position.z -= 0.050
 pick.orientation = copy.deepcopy(rendezvous_picking_pose.orientation)
 
 
