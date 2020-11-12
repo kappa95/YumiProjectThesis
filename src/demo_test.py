@@ -204,18 +204,18 @@ def cartesian(dest_pose, group, constraint=None):
         wpose.position.y += (dest_pose.position.y - start_pose.position.y) * 0.25
         wpose.position.z += (dest_pose.position.z - start_pose.position.z) * 0.25
         waypoints.append(copy.deepcopy(wpose))
-        rospy.loginfo('punto {} e\': \n {}'.format(i, waypoints[i]))
+        rospy.logdebug('punto {} e\': \n {}'.format(i, waypoints[i]))
     fraction = 0.0
     attempts = 0
     plan = None
-    while fraction < 1.0:
+    while fraction < 1.0 and attempts < 5 * planning_attempts:
         attempts += 1
         (plan, fraction) = group.compute_cartesian_path(waypoints,
-                                                        0.001,  # eef step: 1cm
+                                                        0.01,  # eef step: 1cm
                                                         jump_threshold=0.0,
                                                         avoid_collisions=True,
                                                         path_constraints=constraint)
-        rospy.loginfo('attempts: {} fraction: {}%'.format(attempts, fraction*100))
+        rospy.logdebug('attempts: {} fraction: {}%'.format(attempts, fraction*100))
     # ricalcolare il time della traiettoria!
     if fraction == 1.0:
         plan = group.retime_trajectory(robot.get_current_state(), plan, 1.0)
@@ -229,7 +229,7 @@ def cartesian(dest_pose, group, constraint=None):
 
 def picking_L():
     group_l.set_start_state_to_current_state()
-    rospy.loginfo('going to rendezvous picking pose: {}'.format(rendezvous_picking_pose))
+    rospy.logdebug('going to rendezvous picking pose: {}'.format(rendezvous_picking_pose))
     cartesian(rendezvous_picking_pose, group_l, None)
 
     # Open the gripper
@@ -260,7 +260,7 @@ def picking_L():
     # group_l.set_path_constraints(constraint_list)
     rospy.loginfo('Setted the orientation constraint')
     # Go to pick position
-    rospy.loginfo('Go to pick position: {}'.format(pick))
+    rospy.logdebug('Go to pick position: {}'.format(pick))
     cartesian(pick, group_l, constraint_list_L)
 
     pick_up = group_l.get_current_pose().pose
@@ -288,16 +288,16 @@ def rendez_to_scan_L():
     group_l.set_start_state_to_current_state()
     rospy.loginfo('starting from the rendezvous picking position')
     # Creating a list of JointConstraint objects
-    joints_names = group_l.get_joints()
+    joints_names = robot.get_joint_names("left_arm")
     jc_l = [JointConstraint() for i in joints_names]
     # Filling the JointConstraints
-    for i in xrange(joints_names - 1):
+    for i in xrange(len(joints_names) - 1):
         jc_l[i].joint_name = joints_names[i]
         jc_l[i].position = group_l.get_current_joint_values()[i]
         jc_l[i].weight = 1.0
         jc_l[i].tolerance_below = 0.1
         jc_l[i].tolerance_above = 0.1
-        rospy.loginfo('il joint constraint {} e\' \n'.format(i, jc_l[i]))
+        rospy.logdebug('il joint constraint {} e\' \n'.format(i, jc_l[i]))
     constraint = Constraints()
     constraint.joint_constraints = jc_l
     group_l.set_path_constraints(constraint)
