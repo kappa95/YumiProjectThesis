@@ -270,7 +270,7 @@ def picking_L():
     cartesian(pick, group_l, constraint_list_L)
 
     # picking
-    gripper_effort(RIGHT, 10)
+    gripper_effort(LEFT, 10)
 
     # go up
     rospy.loginfo('going up')
@@ -287,20 +287,26 @@ def picking_L():
 def rendez_to_scan_L():
     group_l.set_start_state_to_current_state()
     rospy.loginfo('starting from the rendezvous picking position')
-    group_l.set_position_target(
-        [
-            rendezvous_picking_pose.position.x,
-            rendezvous_picking_pose.position.y,
-            rendezvous_picking_pose.position.z
-        ]
-    )
-    group_l.go(wait=True)
-    group_l.stop()
+    # Creating a list of JointConstraint objects
+    joints_names = group_l.get_joints()
+    jc_l = [JointConstraint() for i in joints_names]
+    # Filling the JointConstraints
+    for i in xrange(joints_names - 1):
+        jc_l[i].joint_name = joints_names[i]
+        jc_l[i].position = group_l.get_current_joint_values()[i]
+        jc_l[i].weight = 1.0
+        jc_l[i].tolerance_below = 0.1
+        jc_l[i].tolerance_above = 0.1
+        rospy.loginfo('il joint constraint {} e\' \n'.format(i, jc_l[i]))
+    constraint = Constraints()
+    constraint.joint_constraints = jc_l
+    group_l.set_path_constraints(constraint)
     # reorient for barcode Scanning
     rospy.loginfo('reorient for barcode scanning')
     group_l.set_rpy_target([0, PI, 0])
     group_l.go(wait=True)
     group_l.stop()
+    group_l.clear_path_constraints()
 
 
 def run():
