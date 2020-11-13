@@ -155,8 +155,8 @@ pick.position.y -= 0.073
 pick.orientation = copy.deepcopy(rendezvous_picking_pose.orientation)
 
 # Home points
-home_L = [0.200, 0.250, 0.380, 0, PI, 0]
-home_R = [0.200, -0.250, 0.380, 0, PI, PI]
+home_L = [0.300, 0.250, 0.380, 0, PI, 0]
+home_R = [0.300, -0.250, 0.380, 0, PI, PI]
 q_home_L = quaternion_from_euler(home_L[3], home_L[4], home_L[5])
 q_home_R = quaternion_from_euler(home_R[3], home_R[4], home_R[5])
 
@@ -166,8 +166,8 @@ dz_scan = length_tube/2 + 0.040
 # Defining the Scan Pose starting from home
 scan_L = Pose()
 scan_L.position.x = home_L[0]
-scan_L.position.y = home_L[1]
-scan_L.position.z = home_L[2] - dz_scan
+scan_L.position.y = home_L[1] - 0.125
+scan_L.position.z = home_L[2] + dz_scan
 scan_L.orientation.x = q_home_L[0]
 scan_L.orientation.y = q_home_L[1]
 scan_L.orientation.z = q_home_L[2]
@@ -175,7 +175,7 @@ scan_L.orientation.w = q_home_L[3]
 
 scan_R = Pose()
 scan_R.position.x = home_R[0]
-scan_R.position.y = home_R[1]
+scan_R.position.y = home_R[1] - 0.125
 scan_R.position.z = home_R[2]
 scan_R.orientation.x = q_home_R[0]
 scan_R.orientation.y = q_home_R[1]
@@ -194,7 +194,7 @@ def return_home():
     group_l.stop()
     group_l.clear_pose_target(group_l.get_end_effector_link())
     group_r.set_start_state_to_current_state()
-    group_r.set_pose_target([0.200, -0.250, 0.380, 0, PI, PI])
+    group_r.set_pose_target(home_R)
     group_r.go(wait=True)
     group_r.stop()
     group_r.clear_pose_target(group_r.get_end_effector_link())
@@ -307,10 +307,9 @@ def rendez_to_scan_L():
     rospy.loginfo('reorient for barcode scanning')
     reorient = group_l.get_current_joint_values()
     reorient[-1] += PI/4
-    # group_l.set_rpy_target([0, PI, 0])
-    group_l.go(reorient, wait=True)
+    # TODO: Try here: wait=False
+    group_l.go(reorient, wait=False)
     group_l.stop()
-    # group_l.clear_path_constraints()
 
     # Keep the orientation constraint
     oc_home_L = OrientationConstraint()
