@@ -95,15 +95,6 @@ group_both.set_planning_time(planning_time)
 rospy.Publisher('/move_group/display_planned_path', moveit_msgs.msg.DisplayTrajectory, queue_size=20)
 rospy.sleep(1.0)
 
-end_effectorR = group_r.get_end_effector_link()
-rospy.loginfo('End effector R: {}'.format(end_effectorR))
-
-end_effectorL = group_l.get_end_effector_link()
-rospy.loginfo('End effector L: {}'.format(end_effectorL))
-
-end_effectors = group_both.get_end_effector_link()
-rospy.loginfo('gli end effectors sono: {}'.format(end_effectors))
-
 rospy.loginfo('Finished init')
 
 # clean the scene
