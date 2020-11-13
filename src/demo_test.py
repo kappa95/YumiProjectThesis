@@ -235,7 +235,6 @@ def cartesian(dest_pose, group, constraint=None):
 def picking_L():
     rospy.loginfo('going to rendezvous picking pose: {}'.format(rendezvous_picking_pose))
     group_l.set_start_state_to_current_state()
-    # cartesian(rendezvous_picking_pose, group_l, None)
 
     # Open the gripper
     gripper_effort(LEFT, -10)
@@ -293,25 +292,6 @@ def rendez_to_scan_L():
     # TODO: Add the constraint of the workspace
     group_l.set_start_state_to_current_state()
     rospy.loginfo('starting from the rendezvous picking position')
-
-    # TODO: Substitute the constraint with a motion with joints => faster surely!
-    # joints_names = robot.get_joint_names("left_arm")
-    # # Creating a list of JointConstraint objects
-    # # Filling the JointConstraints
-    # jc_l = []
-    # for i in xrange(len(joints_names) - 1):
-    #     x = JointConstraint()
-    #     x.joint_name = joints_names[i]
-    #     x.position = group_l.get_current_joint_values()[i]
-    #     x.weight = 1.0
-    #     x.tolerance_above = 0.1
-    #     x.tolerance_below = 0.1
-    #     rospy.loginfo('il joint constraint {} e\' {}\n'.format(i, x.joint_name))
-    #     jc_l.append(x)
-    # constraint = Constraints()
-    # constraint.joint_constraints = jc_l
-    # group_l.set_path_constraints(constraint)
-
     # reorient for barcode Scanning
     rospy.loginfo('reorient for barcode scanning')
     reorient = group_l.get_current_joint_values()
