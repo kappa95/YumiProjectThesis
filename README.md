@@ -23,7 +23,7 @@ to the output rack hole positions?
 - [x] Find a way to command the 2 arms together
 - [ ] Defining the constraints in which we plan the trajectory and choose the planner
 that guarantees an unique solution for the position
-- [ ] Defining the hypothesis under which the arm should decide a particular trajectory instead of another →  change of the speed if the constraints are hard that decide an unique trajectory
+- [ ] Defining the hypothesis under which the arm should decide a particular trajectory instead of another → change of the speed if the constraints are hard that decide an unique trajectory
 - [ ] In the case we don’t want to fix an unique trajectory, find the constraints
  and planner for having “reasonable” and not strange trajectories
 - [ ] Write the algorithm for choosing the solutions
