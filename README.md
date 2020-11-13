@@ -27,3 +27,23 @@ that guarantees an unique solution for the position
 - [ ] In the case we don’t want to fix an unique trajectory, find the constraints
  and planner for having “reasonable” and not strange trajectories
 - [ ] Write the algorithm for choosing the solutions
+
+### Project Demo part
+
+An initial demo with fixed input/output racks --> working with points and constraints
+
+#### Barcode-Camera Side:
+ 
+- [x] Find a way to use the Yumi's Camera
+- [x] Find a way to decode the image for Barcode Scanning
+- [x] Created a Program for publish barcode on a topic
+- [ ] Created a Program for managing the barcodes (Barcode Manager)
+
+#### Motion Side:
+- [x] Picking Motion
+- [ ] Scanning Motion
+- [ ] Interaction with Barcode Manager
+- [ ] Buffer Motion
+- [ ] Pick from Buffer
+- [ ] Placing
+- [ ] Repeat
