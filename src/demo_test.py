@@ -213,7 +213,7 @@ def cartesian(dest_pose, group, constraint=None):
     fraction = 0.0
     attempts = 0
     plan = None
-    while fraction < 1.0 and attempts < 5 * planning_attempts:
+    while fraction < 1.0 and attempts < 10 * planning_attempts:
         attempts += 1
         (plan, fraction) = group.compute_cartesian_path(waypoints,
                                                         0.01,  # eef step: 1cm
@@ -233,8 +233,9 @@ def cartesian(dest_pose, group, constraint=None):
 
 
 def picking_L():
-    rospy.logdebug('going to rendezvous picking pose: {}'.format(rendezvous_picking_pose))
-    cartesian(rendezvous_picking_pose, group_l, None)
+    rospy.loginfo('going to rendezvous picking pose: {}'.format(rendezvous_picking_pose))
+    group_l.set_start_state_to_current_state()
+    # cartesian(rendezvous_picking_pose, group_l, None)
 
     # Open the gripper
     gripper_effort(LEFT, -10)
@@ -257,8 +258,8 @@ def picking_L():
     constraint_list_L = Constraints()
     constraint_list_L.orientation_constraints = oc_L_list
 
-    rospy.loginfo('Reorient of the arm')
-    group_l.set_orientation_target(quaternion_rendezvous_picking)
+    # rospy.loginfo('Reorient of the arm')
+    group_l.set_pose_target(rendezvous_picking_pose)
     reorient = group_l.plan()
     group_l.execute(reorient, wait=True)
     # group_l.set_path_constraints(constraint_list)
@@ -292,29 +293,33 @@ def rendez_to_scan_L():
     # TODO: Add the constraint of the workspace
     group_l.set_start_state_to_current_state()
     rospy.loginfo('starting from the rendezvous picking position')
-    # Creating a list of JointConstraint objects
-    joints_names = robot.get_joint_names("left_arm")
+
     # TODO: Substitute the constraint with a motion with joints => faster surely!
-    # Filling the JointConstraints
-    jc_l = []
-    for i in xrange(len(joints_names) - 1):
-        x = JointConstraint()
-        x.joint_name = joints_names[i]
-        x.position = group_l.get_current_joint_values()[i]
-        x.weight = 1.0
-        x.tolerance_above = 0.1
-        x.tolerance_below = 0.1
-        rospy.loginfo('il joint constraint {} e\' {}\n'.format(i, x.joint_name))
-        jc_l.append(x)
-    constraint = Constraints()
-    constraint.joint_constraints = jc_l
-    group_l.set_path_constraints(constraint)
+    # joints_names = robot.get_joint_names("left_arm")
+    # # Creating a list of JointConstraint objects
+    # # Filling the JointConstraints
+    # jc_l = []
+    # for i in xrange(len(joints_names) - 1):
+    #     x = JointConstraint()
+    #     x.joint_name = joints_names[i]
+    #     x.position = group_l.get_current_joint_values()[i]
+    #     x.weight = 1.0
+    #     x.tolerance_above = 0.1
+    #     x.tolerance_below = 0.1
+    #     rospy.loginfo('il joint constraint {} e\' {}\n'.format(i, x.joint_name))
+    #     jc_l.append(x)
+    # constraint = Constraints()
+    # constraint.joint_constraints = jc_l
+    # group_l.set_path_constraints(constraint)
+
     # reorient for barcode Scanning
     rospy.loginfo('reorient for barcode scanning')
-    group_l.set_rpy_target([0, PI, 0])
-    group_l.go(wait=True)
+    reorient = group_l.get_current_joint_values()
+    reorient[-1] += PI/4
+    # group_l.set_rpy_target([0, PI, 0])
+    group_l.go(reorient, wait=True)
     group_l.stop()
-    group_l.clear_path_constraints()
+    # group_l.clear_path_constraints()
 
 
 def run():
