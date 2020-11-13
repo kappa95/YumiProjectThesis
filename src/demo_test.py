@@ -128,14 +128,6 @@ input_rack_pose.pose.position.y = 0.38090
 input_rack_pose.pose.position.z = table_height + 0.075/2
 scene.add_box("input_rack", input_rack_pose, size=(x_input_rack, y_input_rack, z_input_rack))
 
-
-home_R = [1.6379728317260742, 0.20191457867622375, -2.5927578258514404, 0.538416862487793, 2.7445449829101562,
-          1.5043296813964844, 1.7523150444030762]
-home_L = [-1.46564781665802, 0.3302380442619324, 2.507143497467041, 0.7764986753463745, -2.852548837661743,
-          1.659092664718628, 1.378138542175293]
-
-home_joints = home_L + home_R
-
 length_tube = 0.125  # [m]
 
 # Points useful: need to compute the pose
@@ -162,6 +154,34 @@ pick.position.x -= 0.115
 pick.position.y -= 0.073
 pick.orientation = copy.deepcopy(rendezvous_picking_pose.orientation)
 
+# Home points
+home_L = [0.200, 0.250, 0.380, 0, PI, 0]
+home_R = [0.200, -0.250, 0.380, 0, PI, PI]
+q_home_L = quaternion_from_euler(home_L[3], home_L[4], home_L[5])
+q_home_R = quaternion_from_euler(home_R[3], home_R[4], home_R[5])
+
+# Distance between the label of the test tube and the camera on z axis
+dz_scan = length_tube/2 + 0.040
+
+# Defining the Scan Pose starting from home
+scan_L = Pose()
+scan_L.position.x = home_L[0]
+scan_L.position.y = home_L[1]
+scan_L.position.z = home_L[2] + dz_scan
+scan_L.orientation.x = q_home_L[0]
+scan_L.orientation.y = q_home_L[1]
+scan_L.orientation.z = q_home_L[2]
+scan_L.orientation.w = q_home_L[3]
+
+scan_R = Pose()
+scan_R.position.x = home_R[0]
+scan_R.position.y = home_R[1]
+scan_R.position.z = home_R[2]
+scan_R.orientation.x = q_home_R[0]
+scan_R.orientation.y = q_home_R[1]
+scan_R.orientation.z = q_home_R[2]
+scan_R.orientation.w = q_home_R[3]
+
 
 def return_home():
     """
@@ -169,7 +189,7 @@ def return_home():
     :return:
     """
     group_l.set_start_state_to_current_state()
-    group_l.set_pose_target([0.200, 0.250, 0.380, 0, PI, 0])
+    group_l.set_pose_target(home_L)
     group_l.go(wait=True)
     group_l.stop()
     group_l.clear_pose_target(group_l.get_end_effector_link())
@@ -291,6 +311,32 @@ def rendez_to_scan_L():
     group_l.go(reorient, wait=True)
     group_l.stop()
     # group_l.clear_path_constraints()
+
+    # Keep the orientation constraint
+    oc_home_L = OrientationConstraint()
+    oc_home_L.link_name = "gripper_l_base"
+    oc_home_L.header.frame_id = "yumi_body"
+    oc_home_L.orientation = copy.deepcopy(group_l.get_current_pose(oc_home_L.link_name).pose.orientation)
+    oc_home_L.absolute_x_axis_tolerance = 0.1
+    oc_home_L.absolute_y_axis_tolerance = 0.1
+    oc_home_L.absolute_z_axis_tolerance = 0.1
+    oc_home_L.weight = 1.0
+    # Constraints should be a list
+    oc_L_list = [oc_home_L]
+    # Declaring the object constraints
+    constraint_list_L = Constraints()
+    constraint_list_L.orientation_constraints = oc_L_list
+
+    # Go to home
+    group_l.set_path_constraints(constraint_list_L)
+    group_l.set_start_state_to_current_state()
+    group_l.set_pose_target(home_L)
+    plan_rendezvous_home = group_l.plan()
+    group_l.execute(plan_rendezvous_home)
+    group_l.stop()
+
+    # Go to Scan
+    cartesian(scan_L, group_l, constraint_list_L)
 
 
 def run():
