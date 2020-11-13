@@ -148,10 +148,12 @@ rendezvous_picking_pose.orientation.w = quaternion_rendezvous_picking[3]
 
 # Picking input rack point A1
 pick = Pose()
-# TODO: Set the points A1
+# TODO: TEST!!!! A1 POSE
 pick.position = copy.deepcopy(rendezvous_picking_pose.position)
-pick.position.x -= 0.115
-pick.position.y -= 0.073
+pick.position.x -= 0.09520
+# pick.position.x -= 0.115
+# pick.position.y -= 0.073
+pick.position.y -= 0.05270
 pick.orientation = copy.deepcopy(rendezvous_picking_pose.orientation)
 
 # Home points
