@@ -38,7 +38,7 @@ ws_R = [0.000, -table_length/2, table_height, 0.600, 0.200, 0.593]
 ws_L = [0.000, -0.200, table_height, 0.600, table_length, 0.593]
 
 # Initialization of the Node
-rospy.init_node('demo_test', anonymous=True)
+rospy.init_node('demo_test', anonymous=True, log_level=rospy.DEBUG)
 # Initialization of Moveit
 rospy.loginfo('Starting the Initialization')
 roscpp_initialize(sys.argv)
@@ -106,6 +106,7 @@ try:
     scene.remove_world_object("input_rack")
 except Exception as e:
     print(e)
+
 rospy.sleep(0.5)
 
 # add the table table
@@ -117,7 +118,6 @@ table_pose.pose.position.y = 0.0
 table_pose.pose.position.z = table_height / 2
 scene.add_box("table", table_pose, size=(table_width, 1.2, table_height))
 
-rospy.sleep(0.5)
 x_input_rack = 0.175
 y_input_rack = 0.260
 z_input_rack = 0.075
@@ -223,9 +223,15 @@ def cartesian(dest_pose, group, constraint=None):
         rospy.logdebug('punto {} e\': \n {}'.format(i, waypoints[i]))
     fraction = 0.0
     attempts = 0
+    start_time = rospy.get_time()
+    actual_time = rospy.get_time()
+    duration = actual_time - start_time
+    max_duration = 60.0
     plan = None
-    while fraction < 1.0 and attempts < 10 * planning_attempts:
+    while fraction < 1.0 and duration < max_duration:
         attempts += 1
+        actual_time = rospy.get_time()
+        duration = actual_time - start_time
         (plan, fraction) = group.compute_cartesian_path(waypoints,
                                                         0.01,  # eef step: 1cm
                                                         jump_threshold=0.0,
@@ -240,7 +246,7 @@ def cartesian(dest_pose, group, constraint=None):
         group.stop()
     else:
         rospy.logerr('it doesn\'t complete the trajectory, fraction: {}%'.format(fraction*100))
-        raise Exception('Not able to complete the trajectory!')
+        raise Exception('Exceeded the maximum time')
 
 
 def picking_L():
