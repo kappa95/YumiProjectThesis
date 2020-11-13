@@ -21,8 +21,15 @@ BOTH = 3  # :ID of both_arms
 table_height = 0.025  # [m] :The height of the upper surface of the table (z)
 table_length = 1.200  # [m] :The width of the table (y)
 table_width = 0.400  # [m] :The width of the table (x)
+
 # Length of the Gripper from datasheet
 z_gripper = 0.136  # [m]
+
+# Distance of the center of the cam from yumi_link_7_r
+z_cam = 0.040  # [m]
+
+# Length of the test tube
+length_tube = 0.125  # [m]
 
 # Choice of the planners
 planner = "RRTstarkConfigDefault"  # Asymptotic optimal tree-based planner
@@ -95,7 +102,6 @@ group_both.set_planning_time(planning_time)
 rospy.Publisher('/move_group/display_planned_path', moveit_msgs.msg.DisplayTrajectory, queue_size=20)
 rospy.sleep(1.0)
 
-rospy.loginfo('Finished init')
 
 # clean the scene
 
@@ -128,7 +134,6 @@ input_rack_pose.pose.position.y = 0.38090
 input_rack_pose.pose.position.z = table_height + 0.075/2
 scene.add_box("input_rack", input_rack_pose, size=(x_input_rack, y_input_rack, z_input_rack))
 
-length_tube = 0.125  # [m]
 
 # Points useful: need to compute the pose
 # Rendezvous_picking_point: center of the rack at an height of 10 cm more
@@ -138,6 +143,7 @@ rendezvous_picking_pose.position.y = 0.38090
 rendezvous_picking_pose.position.z = table_height + 0.075/2
 rendezvous_picking_pose.position.z += 0.100 + z_input_rack + z_gripper  # [m]
 
+# Rotation of 45 degrees of the end effector: method of the matrix rotations
 R1 = euler_matrix(0, PI, 0)
 R2 = euler_matrix(0, 0, -PI / 4)
 quaternion_rendezvous_picking = quaternion_from_matrix(concatenate_matrices(R1, R2))
@@ -147,8 +153,13 @@ rendezvous_picking_pose.orientation.z = quaternion_rendezvous_picking[2]
 rendezvous_picking_pose.orientation.w = quaternion_rendezvous_picking[3]
 
 # Picking input rack point A1
+# TODO: Think how to repeat programmatically the placing process
+# Same column deltas of the output rack
+dx_tube = 0.02150  # [m]
+dy_tube = 0.0130  # [m]
 pick = Pose()
 # TODO: TEST!!!! A1 POSE
+# TODO: Convert these positions for the output rack instead of the input
 pick.position = copy.deepcopy(rendezvous_picking_pose.position)
 pick.position.x -= 0.09520
 # pick.position.x -= 0.115
@@ -163,7 +174,7 @@ q_home_L = quaternion_from_euler(home_L[3], home_L[4], home_L[5])
 q_home_R = quaternion_from_euler(home_R[3], home_R[4], home_R[5])
 
 # Distance between the label of the test tube and the camera on z axis
-dz_scan = length_tube/2 + 0.040
+dz_scan = length_tube/2 + z_cam
 
 # Defining the Scan Pose starting from home
 scan_L = Pose()
@@ -183,6 +194,8 @@ scan_R.orientation.x = q_home_R[0]
 scan_R.orientation.y = q_home_R[1]
 scan_R.orientation.z = q_home_R[2]
 scan_R.orientation.w = q_home_R[3]
+
+rospy.loginfo('Finished init')
 
 
 def return_home():
