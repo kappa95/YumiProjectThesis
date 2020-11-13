@@ -25,9 +25,9 @@ table_width = 0.400  # [m] :The width of the table (x)
 z_gripper = 0.136  # [m]
 
 # Choice of the planners
-planner = "RRTstarkConfigDefault"  # Asymptotic optimal tree-based planner
+# planner = "RRTstarkConfigDefault"  # Asymptotic optimal tree-based planner
 # planner = "ESTkConfigDefault"  # Default: tree-based planner
-# planner = "RRTConnectConfigDefault"  # Tree-based planner
+planner = "RRTConnectConfigDefault"  # Tree-based planner
 # planner = "PRMstarkConfigDefault"  # Probabilistic Roadmap planner
 
 planning_attempts = 100  # planning attempts
@@ -177,11 +177,16 @@ def return_home():
     Return to the home position
     :return:
     """
-    # state = robot.get_current_state()
-    # group_both.set_start_state(state)
-    rospy.loginfo('Return to home for both arms')
-    group_both.go(home_joints, wait=True)
-    group_both.stop()
+    group_l.set_start_state_to_current_state()
+    group_l.set_pose_target([0.200, 0.250, 0.380, 0, PI, 0])
+    group_l.go(wait=True)
+    group_l.stop()
+    group_l.clear_pose_target(group_l.get_end_effector_link())
+    group_r.set_start_state_to_current_state()
+    group_r.set_pose_target([0.200, -0.250, 0.380, 0, PI, PI])
+    group_r.go(wait=True)
+    group_r.stop()
+    group_r.clear_pose_target(group_r.get_end_effector_link())
 
 
 def cartesian(dest_pose, group, constraint=None):
@@ -228,7 +233,6 @@ def cartesian(dest_pose, group, constraint=None):
 
 
 def picking_L():
-    group_l.set_start_state_to_current_state()
     rospy.logdebug('going to rendezvous picking pose: {}'.format(rendezvous_picking_pose))
     cartesian(rendezvous_picking_pose, group_l, None)
 
@@ -255,10 +259,10 @@ def picking_L():
 
     rospy.loginfo('Reorient of the arm')
     group_l.set_orientation_target(quaternion_rendezvous_picking)
-    group_l.go(wait=True)
-    group_l.stop()
+    reorient = group_l.plan()
+    group_l.execute(reorient, wait=True)
     # group_l.set_path_constraints(constraint_list)
-    rospy.loginfo('Setted the orientation constraint')
+    rospy.logdebug('Setted the orientation constraint')
     # Go to pick position
     rospy.logdebug('Go to pick position: {}'.format(pick))
     cartesian(pick, group_l, constraint_list_L)
@@ -285,6 +289,7 @@ def picking_L():
 
 
 def rendez_to_scan_L():
+    # TODO: Add the constraint of the workspace
     group_l.set_start_state_to_current_state()
     rospy.loginfo('starting from the rendezvous picking position')
     # Creating a list of JointConstraint objects
@@ -317,6 +322,7 @@ def run():
     global scene
     global mpr
 
+    return_home()
     picking_L()
     rendez_to_scan_L()
 
