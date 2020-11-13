@@ -25,9 +25,9 @@ table_width = 0.400  # [m] :The width of the table (x)
 z_gripper = 0.136  # [m]
 
 # Choice of the planners
-# planner = "RRTstarkConfigDefault"  # Asymptotic optimal tree-based planner
+planner = "RRTstarkConfigDefault"  # Asymptotic optimal tree-based planner
 # planner = "ESTkConfigDefault"  # Default: tree-based planner
-planner = "RRTConnectConfigDefault"  # Tree-based planner
+# planner = "RRTConnectConfigDefault"  # Tree-based planner
 # planner = "PRMstarkConfigDefault"  # Probabilistic Roadmap planner
 
 planning_attempts = 100  # planning attempts
@@ -294,15 +294,18 @@ def rendez_to_scan_L():
     rospy.loginfo('starting from the rendezvous picking position')
     # Creating a list of JointConstraint objects
     joints_names = robot.get_joint_names("left_arm")
-    jc_l = [JointConstraint() for i in joints_names]
+    # TODO: Substitute the constraint with a motion with joints => faster surely!
     # Filling the JointConstraints
+    jc_l = []
     for i in xrange(len(joints_names) - 1):
-        jc_l[i].joint_name = joints_names[i]
-        jc_l[i].position = group_l.get_current_joint_values()[i]
-        jc_l[i].weight = 1.0
-        jc_l[i].tolerance_below = 0.1
-        jc_l[i].tolerance_above = 0.1
-        rospy.logdebug('il joint constraint {} e\' \n'.format(i, jc_l[i]))
+        x = JointConstraint()
+        x.joint_name = joints_names[i]
+        x.position = group_l.get_current_joint_values()[i]
+        x.weight = 1.0
+        x.tolerance_above = 0.1
+        x.tolerance_below = 0.1
+        rospy.loginfo('il joint constraint {} e\' {}\n'.format(i, x.joint_name))
+        jc_l.append(x)
     constraint = Constraints()
     constraint.joint_constraints = jc_l
     group_l.set_path_constraints(constraint)
@@ -328,9 +331,6 @@ def run():
 
 
 if __name__ == '__main__':
-    # try:
     run()
     rospy.loginfo('finished')
     roscpp_shutdown()
-    # except Exception as e:
-    #     print(e)
