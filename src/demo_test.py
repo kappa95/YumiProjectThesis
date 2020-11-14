@@ -241,7 +241,7 @@ def cartesian(dest_pose, group, constraint=None):
     start_time = rospy.get_time()
     actual_time = rospy.get_time()
     duration = actual_time - start_time
-    max_duration = 60.0
+    max_duration = 180.0
     plan = None
     while fraction < 1.0 and duration < max_duration:
         attempts += 1
@@ -325,11 +325,13 @@ def rendez_to_scan_L():
     group_l.set_start_state_to_current_state()
     rospy.loginfo('starting from the rendezvous picking position')
     # reorient for barcode Scanning
-    rospy.loginfo('reorient for barcode scanning')
+    rospy.logdebug('reorient for barcode scanning')
     reorient = group_l.get_current_joint_values()
     reorient[-1] += PI/4
-    # TODO: Try here: wait=False
-    group_l.go(reorient, wait=False)
+    group_l.set_joint_value_target(reorient)
+    reorient_plan = group_l.plan(reorient)
+    group_l.execute(reorient_plan, wait=True)
+    # group_l.go(reorient, wait=True)
     group_l.stop()
 
     # Keep the orientation constraint
