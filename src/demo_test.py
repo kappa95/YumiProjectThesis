@@ -237,15 +237,9 @@ def cartesian(dest_pose, group, constraint=None):
         rospy.logdebug('punto {} e\': \n {}'.format(i, waypoints[i]))
     fraction = 0.0
     attempts = 0
-    start_time = rospy.get_time()
-    actual_time = rospy.get_time()
-    duration = actual_time - start_time
-    max_duration = 180.0
     plan = None
-    while fraction < 1.0 and duration < max_duration:
+    while fraction < 1.0 and attempts < 5 * planning_attempts:
         attempts += 1
-        actual_time = rospy.get_time()
-        duration = actual_time - start_time
         (plan, fraction) = group.compute_cartesian_path(waypoints,
                                                         0.01,  # eef step: 1cm
                                                         jump_threshold=0.0,
