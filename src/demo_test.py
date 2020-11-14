@@ -73,7 +73,7 @@ group_l.set_planning_time(planning_time)
 # Right arm
 group_r = MoveGroupCommander("right_arm")
 # Type of planner
-# group_r.set_planner_id(planner)
+group_r.set_planner_id(planner)
 group_r.set_pose_reference_frame("yumi_body")
 
 # Setting the workspace
@@ -88,7 +88,7 @@ group_r.set_planning_time(planning_time)
 # Both arms
 group_both = MoveGroupCommander("both_arms")
 # Type of planner
-# group_both.set_planner_id(planner)
+group_both.set_planner_id(planner)
 
 # Pose reference frame is the yumi_body
 group_both.set_pose_reference_frame("yumi_body")
@@ -114,15 +114,15 @@ except Exception as e:
 
 rospy.sleep(0.5)
 
-# add the table table
-rospy.loginfo('Adding the table object')
+# table informations
 table_pose = PoseStamped()
 table_pose.header.frame_id = "yumi_body"
 table_pose.pose.position.x = 0.150 + table_width / 2
 table_pose.pose.position.y = 0.0
 table_pose.pose.position.z = table_height / 2
-scene.add_box("table", table_pose, size=(table_width, 1.2, table_height))
 
+
+# Rack informations
 x_input_rack = 0.175
 y_input_rack = 0.260
 z_input_rack = 0.075
@@ -131,7 +131,6 @@ input_rack_pose.header.frame_id = "yumi_body"
 input_rack_pose.pose.position.x = 0.3465
 input_rack_pose.pose.position.y = 0.38090
 input_rack_pose.pose.position.z = table_height + 0.075/2
-scene.add_box("input_rack", input_rack_pose, size=(x_input_rack, y_input_rack, z_input_rack))
 
 
 # Points useful: need to compute the pose
@@ -238,7 +237,7 @@ def cartesian(dest_pose, group, constraint=None):
     fraction = 0.0
     attempts = 0
     plan = None
-    while fraction < 1.0 and attempts < 5 * planning_attempts:
+    while fraction < 1.0 and attempts < planning_attempts:
         attempts += 1
         (plan, fraction) = group.compute_cartesian_path(waypoints,
                                                         0.01,  # eef step: 1cm
@@ -254,11 +253,11 @@ def cartesian(dest_pose, group, constraint=None):
         group.stop()
     else:
         rospy.logerr('it doesn\'t complete the trajectory, fraction: {}%'.format(fraction*100))
-        raise Exception('Exceeded the maximum time')
+        raise Exception('Exceeded the maximum number of retries')
 
 
 def picking_L():
-    rospy.loginfo('going to rendezvous picking pose: {}'.format(rendezvous_picking_pose))
+    rospy.loginfo('going to rendezvous picking pose: \n {}'.format(rendezvous_picking_pose))
     group_l.set_start_state_to_current_state()
 
     # Open the gripper
@@ -267,7 +266,7 @@ def picking_L():
 
     # Set the constraints for the picking:
     # Setting the Orientation constraint
-    rospy.loginfo('Setting the orientation constraint')
+    rospy.logdebug('Setting the orientation constraint')
     oc_L = OrientationConstraint()
     oc_L.link_name = "gripper_l_base"
     oc_L.header.frame_id = "yumi_body"
@@ -282,16 +281,17 @@ def picking_L():
     constraint_list_L = Constraints()
     constraint_list_L.orientation_constraints = oc_L_list
 
-    # rospy.loginfo('Reorient of the arm')
+    group_l.set_max_velocity_scaling_factor(1.0)
+    group_l.set_max_acceleration_scaling_factor(1.0)
     group_l.set_pose_target(rendezvous_picking_pose)
     reorient = group_l.plan()
     group_l.execute(reorient, wait=True)
-    # group_l.set_path_constraints(constraint_list)
     rospy.logdebug('Setted the orientation constraint')
     # Go to pick position
-    rospy.logdebug('Go to pick position: {}'.format(pick))
+    rospy.logdebug('Go to pick position: \n {}'.format(pick))
     cartesian(pick, group_l, constraint_list_L)
 
+    # FIXME: This motion is not done
     pick_up = group_l.get_current_pose().pose
     pick.position.z = input_rack_pose.pose.position.z + z_input_rack/2 + 0.005 + z_gripper
     group_l.set_max_velocity_scaling_factor(0.10)
@@ -354,6 +354,27 @@ def rendez_to_scan_L():
     cartesian(scan_L, group_l, constraint_list_L)
 
 
+def home_to_scan_R():
+    # Set the constraints for the scan:
+    # Setting the Orientation constraint
+    rospy.logdebug('Setting the orientation constraint')
+    oc_R = OrientationConstraint()
+    oc_R.link_name = "gripper_r_base"
+    oc_R.header.frame_id = "yumi_body"
+    oc_R.orientation = copy.deepcopy(scan_R.orientation)
+    oc_R.absolute_x_axis_tolerance = 0.1
+    oc_R.absolute_y_axis_tolerance = 0.1
+    oc_R.absolute_z_axis_tolerance = 0.1
+    oc_R.weight = 1.0
+    # Constraints should be a list
+    oc_R_list = [oc_R]
+    # Declaring the object constraints
+    constraint_list_R = Constraints()
+    constraint_list_R.orientation_constraints = oc_R_list
+    group_r.set_start_state_to_current_state()
+    cartesian(scan_R, group_r, constraint=constraint_list_R)
+
+
 def run():
     global robot
     global group_l
@@ -362,9 +383,15 @@ def run():
     global scene
     global mpr
 
+    rospy.loginfo('Adding the table and input rack objects')
+    scene.add_box("table", table_pose, size=(table_width, 1.2, table_height))
+    scene.add_box("input_rack", input_rack_pose, size=(x_input_rack, y_input_rack, z_input_rack))
+    rospy.sleep(1.0)
+
     return_home()
     picking_L()
     rendez_to_scan_L()
+    home_to_scan_R()
 
 
 if __name__ == '__main__':
