@@ -106,7 +106,6 @@ rospy.sleep(1.0)
 # clean the scene
 
 rospy.loginfo('Cleaning of the objects in the scene')
-rospy.loginfo('Cleaning of the objects')
 try:
     scene.remove_world_object("table")
     scene.remove_world_object("input_rack")
