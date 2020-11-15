@@ -244,11 +244,12 @@ def cartesian(dest_pose, group, constraint=None):
                                                         jump_threshold=0.0,
                                                         avoid_collisions=True,
                                                         path_constraints=constraint)
-        rospy.logdebug('attempts: {} fraction: {}%'.format(attempts, fraction*100))
+        # rospy.logdebug('attempts: {} fraction: {}%'.format(attempts, fraction*100))
     # ricalcolare il time della traiettoria!
     if fraction == 1.0:
         plan = group.retime_trajectory(robot.get_current_state(), plan, 1.0)
         rospy.loginfo('executing the plan')
+        rospy.logdebug('attempts: {} fraction: {}%'.format(attempts, fraction * 100))
         group.execute(plan, wait=True)
         group.stop()
     else:
