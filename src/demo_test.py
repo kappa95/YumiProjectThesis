@@ -378,6 +378,9 @@ def home_to_scan_R():
     cartesian(scan_R, group_r, constraint=constraint_list_R)
 
 
+# TODO: Write here the BarcodeManager part after have tested it
+
+
 def tube_exchange():
     # Set the constraints for the scan:
     # Setting the Orientation constraint
@@ -395,12 +398,11 @@ def tube_exchange():
     # Declaring the object constraints
     constraint_list_R = Constraints()
     constraint_list_R.orientation_constraints = oc_R_list
-    group_r.shift_pose_target(1, -0.050)
-    # group_r.set_path_constraints(constraint_list_R)
+    group_r.shift_pose_target(1, -0.200)
     plan_homeR_pose = group_r.plan()
     group_r.execute(plan_homeR_pose)
     group_r.stop()
-    # group_r.clear_path_constraints()
+    # TODO: groupL: Go to the Buffer Position
 
 
 def run():
@@ -420,6 +422,7 @@ def run():
     picking_L()
     rendez_to_scan_L()
     home_to_scan_R()
+    # TODO: Put here the function of the scan part
     tube_exchange()
 
 
