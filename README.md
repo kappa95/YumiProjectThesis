@@ -37,13 +37,13 @@ An initial demo with fixed input/output racks --> working with points and constr
 - [x] Find a way to use the Yumi's Camera
 - [x] Find a way to decode the image for Barcode Scanning
 - [x] Created a Program for publish barcode on a topic
-- [ ] Created a Program for managing the barcodes (Barcode Manager)
+- [x] Created a Program for managing the barcodes (Barcode Manager) --> To test it
 
 #### Motion Side:
 - [x] Picking Motion
-- [ ] Scanning Motion
-- [ ] Interaction with Barcode Manager
-- [ ] Buffer Motion
+- [x] Scanning Motion
+- [ ] Interaction with Barcode Manager (WIP)
+- [ ] Buffer Motion (WIP)
 - [ ] Pick from Buffer
 - [ ] Placing
 - [ ] Repeat
