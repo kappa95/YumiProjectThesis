@@ -32,13 +32,13 @@ z_cam = 0.040  # [m]
 length_tube = 0.125  # [m]
 
 # Choice of the planners
-planner = "RRTstarkConfigDefault"  # Asymptotic optimal tree-based planner
+# planner = "RRTstarkConfigDefault"  # Asymptotic optimal tree-based planner
 # planner = "ESTkConfigDefault"  # Default: tree-based planner
-# planner = "RRTConnectConfigDefault"  # Tree-based planner
+planner = "RRTConnectConfigDefault"  # Tree-based planner
 # planner = "PRMstarkConfigDefault"  # Probabilistic Roadmap planner
 
-planning_attempts = 100  # planning attempts
-planning_time = 50  # [s] Planning time for computation
+planning_attempts = 500  # planning attempts
+planning_time = 10  # [s] Planning time for computation
 
 # Defining the workspace [min X, min Y, min Z, max X, max Y, max Z]
 ws_R = [0.000, -table_length/2, table_height, 0.600, 0.200, 0.593]
