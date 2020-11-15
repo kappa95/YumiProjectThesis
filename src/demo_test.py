@@ -68,7 +68,7 @@ group_l.set_workspace(ws=ws_L)
 group_l.allow_replanning(True)
 group_l.set_goal_tolerance(0.005)
 group_l.set_num_planning_attempts(planning_attempts)
-# group_l.set_planning_time(planning_time)
+group_l.set_planning_time(planning_time)
 
 # Right arm
 group_r = MoveGroupCommander("right_arm")
@@ -83,7 +83,7 @@ group_r.set_workspace(ws=ws_R)
 group_r.allow_replanning(True)
 group_r.set_goal_tolerance(0.005)
 group_r.set_num_planning_attempts(planning_attempts)
-# group_r.set_planning_time(planning_time)
+group_r.set_planning_time(planning_time)
 
 # Both arms
 group_both = MoveGroupCommander("both_arms")
@@ -96,7 +96,7 @@ group_both.set_pose_reference_frame("yumi_body")
 group_both.allow_replanning(True)
 group_both.set_goal_tolerance(0.005)
 group_both.set_num_planning_attempts(planning_attempts)
-# group_both.set_planning_time(planning_time)
+group_both.set_planning_time(planning_time)
 
 # Publish the trajectory on Rviz
 rospy.Publisher('/move_group/display_planned_path', moveit_msgs.msg.DisplayTrajectory, queue_size=20)
@@ -291,14 +291,14 @@ def picking_L():
     rospy.logdebug('Go to pick position: \n {}'.format(pick))
     cartesian(pick, group_l, constraint_list_L)
 
-    # FIXME: This motion is not done
+    # FIXME: This motion is problematic
     pick_up = group_l.get_current_pose().pose
     pick.position.z = input_rack_pose.pose.position.z + z_input_rack/2 + 0.005 + z_gripper
-    group_l.set_max_velocity_scaling_factor(0.10)
+    group_l.set_max_velocity_scaling_factor(0.50)
 
     cartesian(pick, group_l, constraint_list_L)
 
-    # picking
+    # picking: closing gripper
     gripper_effort(LEFT, 10)
 
     # go up
@@ -322,9 +322,9 @@ def rendez_to_scan_L():
     reorient = group_l.get_current_joint_values()
     reorient[-1] += PI/4
     group_l.set_joint_value_target(reorient)
-    reorient_plan = group_l.plan(reorient)
-    group_l.execute(reorient_plan, wait=True)
-    # group_l.go(reorient, wait=True)
+    # reorient_plan = group_l.plan(reorient)
+    # group_l.execute(reorient_plan, wait=True)
+    group_l.go(reorient, wait=True)
     group_l.stop()
 
     # Keep the orientation constraint
