@@ -68,7 +68,7 @@ group_l.set_workspace(ws=ws_L)
 group_l.allow_replanning(True)
 group_l.set_goal_tolerance(0.005)
 group_l.set_num_planning_attempts(planning_attempts)
-group_l.set_planning_time(planning_time)
+# group_l.set_planning_time(planning_time)
 
 # Right arm
 group_r = MoveGroupCommander("right_arm")
@@ -83,7 +83,7 @@ group_r.set_workspace(ws=ws_R)
 group_r.allow_replanning(True)
 group_r.set_goal_tolerance(0.005)
 group_r.set_num_planning_attempts(planning_attempts)
-group_r.set_planning_time(planning_time)
+# group_r.set_planning_time(planning_time)
 
 # Both arms
 group_both = MoveGroupCommander("both_arms")
@@ -96,7 +96,7 @@ group_both.set_pose_reference_frame("yumi_body")
 group_both.allow_replanning(True)
 group_both.set_goal_tolerance(0.005)
 group_both.set_num_planning_attempts(planning_attempts)
-group_both.set_planning_time(planning_time)
+# group_both.set_planning_time(planning_time)
 
 # Publish the trajectory on Rviz
 rospy.Publisher('/move_group/display_planned_path', moveit_msgs.msg.DisplayTrajectory, queue_size=20)
