@@ -37,8 +37,8 @@ length_tube = 0.125  # [m]
 planner = "RRTConnectConfigDefault"  # Tree-based planner
 # planner = "PRMstarkConfigDefault"  # Probabilistic Roadmap planner
 
-planning_attempts = 500  # planning attempts
-planning_time = 10  # [s] Planning time for computation
+planning_attempts = 100  # planning attempts
+planning_time = 20  # [s] Planning time for computation
 
 # Defining the workspace [min X, min Y, min Z, max X, max Y, max Z]
 ws_R = [0.000, -table_length/2, table_height, 0.600, 0.200, 0.593]
@@ -67,8 +67,8 @@ group_l.set_workspace(ws=ws_L)
 # Replanning
 group_l.allow_replanning(True)
 group_l.set_goal_tolerance(0.005)
-group_l.set_num_planning_attempts(planning_attempts)
-group_l.set_planning_time(planning_time)
+# group_l.set_num_planning_attempts(planning_attempts)
+# group_l.set_planning_time(planning_time)
 
 # Right arm
 group_r = MoveGroupCommander("right_arm")
@@ -138,7 +138,7 @@ input_rack_pose.pose.position.z = table_height + 0.075/2
 rendezvous_picking_pose = Pose()
 rendezvous_picking_pose.position.x = 0.3465
 rendezvous_picking_pose.position.y = 0.38090
-rendezvous_picking_pose.position.z = table_height + 0.075/2
+rendezvous_picking_pose.position.z = table_height + z_input_rack/2
 rendezvous_picking_pose.position.z += 0.100 + z_input_rack + z_gripper  # [m]
 
 # Rotation of 45 degrees of the end effector: method of the matrix rotations
@@ -237,7 +237,7 @@ def cartesian(dest_pose, group, constraint=None):
     fraction = 0.0
     attempts = 0
     plan = None
-    while fraction < 1.0 and attempts < planning_attempts:
+    while fraction < 1.0 and attempts < 5 * planning_attempts:
         attempts += 1
         (plan, fraction) = group.compute_cartesian_path(waypoints,
                                                         0.01,  # eef step: 1cm
@@ -294,9 +294,9 @@ def picking_L():
 
     # FIXME: This motion is problematic
     pick_up = group_l.get_current_pose().pose
-    pick.position.z = input_rack_pose.pose.position.z + z_input_rack/2 + 0.005 + z_gripper
-    group_l.set_max_velocity_scaling_factor(0.50)
-
+    pick.position.z = input_rack_pose.pose.position.z + z_input_rack/2 + 0.010 + z_gripper
+    group_l.set_max_velocity_scaling_factor(0.25)
+    group_l.set_start_state_to_current_state()
     cartesian(pick, group_l, constraint_list_L)
 
     # picking: closing gripper
@@ -320,13 +320,15 @@ def rendez_to_scan_L():
     rospy.loginfo('starting from the rendezvous picking position')
     # reorient for barcode Scanning
     rospy.logdebug('reorient for barcode scanning')
+
     reorient = group_l.get_current_joint_values()
     reorient[-1] += PI/4
     group_l.set_joint_value_target(reorient)
-    # reorient_plan = group_l.plan(reorient)
-    # group_l.execute(reorient_plan, wait=True)
-    group_l.go(reorient, wait=True)
-    group_l.stop()
+    # group_l.go(reorient, wait=True)
+    # group_l.stop()
+
+    reorient_plan = group_l.plan(reorient)
+    group_l.execute(reorient_plan, wait=True)
 
     # Keep the orientation constraint
     oc_home_L = OrientationConstraint()
@@ -376,6 +378,31 @@ def home_to_scan_R():
     cartesian(scan_R, group_r, constraint=constraint_list_R)
 
 
+def tube_exchange():
+    # Set the constraints for the scan:
+    # Setting the Orientation constraint
+    rospy.logdebug('Setting the orientation constraint')
+    oc_R = OrientationConstraint()
+    oc_R.link_name = "gripper_r_base"
+    oc_R.header.frame_id = "yumi_body"
+    oc_R.orientation = copy.deepcopy(scan_R.orientation)
+    oc_R.absolute_x_axis_tolerance = 0.1
+    oc_R.absolute_y_axis_tolerance = 0.1
+    oc_R.absolute_z_axis_tolerance = 0.1
+    oc_R.weight = 1.0
+    # Constraints should be a list
+    oc_R_list = [oc_R]
+    # Declaring the object constraints
+    constraint_list_R = Constraints()
+    constraint_list_R.orientation_constraints = oc_R_list
+    group_r.shift_pose_target(1, -0.050)
+    # group_r.set_path_constraints(constraint_list_R)
+    plan_homeR_pose = group_r.plan()
+    group_r.execute(plan_homeR_pose)
+    group_r.stop()
+    # group_r.clear_path_constraints()
+
+
 def run():
     global robot
     global group_l
@@ -393,6 +420,7 @@ def run():
     picking_L()
     rendez_to_scan_L()
     home_to_scan_R()
+    tube_exchange()
 
 
 if __name__ == '__main__':
