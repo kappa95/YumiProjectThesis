@@ -130,7 +130,7 @@ input_rack_pose = PoseStamped()
 input_rack_pose.header.frame_id = "yumi_body"
 input_rack_pose.pose.position.x = 0.3465
 input_rack_pose.pose.position.y = 0.38090
-input_rack_pose.pose.position.z = table_height + 0.075/2
+input_rack_pose.pose.position.z = table_height + z_input_rack/2
 
 
 # Points useful: need to compute the pose
@@ -159,10 +159,10 @@ pick = Pose()
 # TODO: TEST!!!! A1 POSE
 # TODO: Convert these positions for the output rack instead of the input
 pick.position = copy.deepcopy(rendezvous_picking_pose.position)
-pick.position.x -= 0.09520
+pick.position.x -= 0.0742  # [m]
+pick.position.y -= 0.1082  # [m]
 # pick.position.x -= 0.115
 # pick.position.y -= 0.073
-pick.position.y -= 0.05270
 pick.orientation = copy.deepcopy(rendezvous_picking_pose.orientation)
 
 # Home points
