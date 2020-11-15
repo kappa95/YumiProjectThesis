@@ -186,7 +186,7 @@ scan_L.orientation.w = q_home_L[3]
 
 scan_R = Pose()
 scan_R.position.x = home_R[0]
-scan_R.position.y = home_R[1] - 0.125
+scan_R.position.y = home_R[1] + 0.125
 scan_R.position.z = home_R[2]
 scan_R.orientation.x = q_home_R[0]
 scan_R.orientation.y = q_home_R[1]
