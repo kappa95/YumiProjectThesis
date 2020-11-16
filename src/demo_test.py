@@ -5,7 +5,7 @@ import copy
 from typing import Any
 from moveit_msgs.msg import *
 from moveit_commander import *
-from std_msgs.msg import String
+from std_msgs.msg import Bool
 import geometry_msgs.msg
 from yumi_utils import PI, gripper_effort
 from yumi_hw.srv import *
@@ -378,7 +378,47 @@ def home_to_scan_R():
     cartesian(scan_R, group_r, constraint=constraint_list_R)
 
 
-# TODO: Write here the BarcodeManager part after have tested it
+class BarcodeScanning:
+    """BarcodeScanning - Check"""
+
+    def __init__(self, ):
+        """Constructor for BarcodeScanning"""
+        self.ok_received = False
+        self.pub = rospy.Publisher('yumi/barcode/ok', Bool, queue_size=1)
+        rospy.Subscriber('barcode/response', Bool, self.callback)
+
+    def callback(self, msg):
+        try:
+            self.ok_received = msg.data
+            rospy.loginfo('demo_test has received: {}'.format(self.ok_received))
+        except rospy.ROSException as err:
+            rospy.logerr(err)
+
+    def answer_true(self):
+        rospy.loginfo('Ok from yumi')
+        self.pub.publish(True)
+
+    def answer_false(self):
+        rospy.loginfo('No from yumi')
+        self.pub.publish(False)
+
+
+def scanning():
+    # Setting the boolean value for the ok
+    ok_received = False
+    checker = BarcodeScanning()
+    # Setting an initial joint condition -> change the 6 axis into 0
+    init_joints = group_l.get_current_joint_values()
+    init_joints[-1] = 0.0
+    group_l.go(wait=True)
+    group_l.stop()
+    while not ok_received:
+        ok_received = checker.ok_received
+        init_joints = group_l.get_current_joint_values()
+        if init_joints[-1] < PI:
+            init_joints[-1] += PI/12
+            group_l.go(wait=True)
+            group_l.stop()
 
 
 def tube_exchange():
