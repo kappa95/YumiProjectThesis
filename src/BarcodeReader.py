@@ -13,7 +13,7 @@ class Nodo:
         self.image = None
         self.br = CvBridge()
         self.loop_rate = rospy.Rate(10)
-        self.pub = rospy.Publisher('Barcode', String, queue_size=1)
+        self.pub = rospy.Publisher('barcode/barcode', String, queue_size=1)
         self.Scanner = zbar.Scanner()
         rospy.Subscriber('yumi/right_cam_image', Image, self.callback)
 
@@ -35,7 +35,6 @@ class Nodo:
                     rospy.loginfo(barcode)
                     rospy.loginfo('Publish of the barcode')
                     self.pub.publish(barcode)
-                    # exit(200)
                 else:
                     rospy.logerr('No barcodes readed')
                     self.pub.publish(None)
