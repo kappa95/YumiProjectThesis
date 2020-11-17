@@ -191,8 +191,6 @@ place = Pose()
 place.position = copy.deepcopy(rendezvous_placing_pose.position)
 place.position.x -= 0.0742  # [m]
 place.position.y -= 0.1082  # [m]
-# pick.position.x -= 0.115
-# pick.position.y -= 0.073
 place.orientation = copy.deepcopy(rendezvous_placing_pose.orientation)
 
 # Home points
