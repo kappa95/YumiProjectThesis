@@ -405,32 +405,37 @@ class BarcodeScanning:
 
 def scanning():
     rospy.loginfo('Starting Scanning')
-    # Initialize the boolean value for the ok
-    ok_received = False
     # Initialize the BarcodeScanning object which receives and publishes oks from BarcodeManager
     checker = BarcodeScanning()
-    # Initialize an initial joint condition -> change the 6 axis into 0
-    init_joints = group_l.get_current_joint_values()
-    init_joints[-1] = 0.0
-    group_l.go(init_joints, wait=True)
-    group_l.stop()
-    while not ok_received:
-        rospy.logdebug('entering in while, ok_received is: {}'.format(ok_received))
-        # Answer False when is not received the True from the BarcodeManager
-        checker.answer_false()
-        ok_received = checker.ok_received
+    # Initialize the boolean value for the ok
+    ok_received = checker.ok_received
+    # Pre-check before starting the motion
+    if ok_received:
+        # Answer that the barcode is read
+        checker.answer_true()
+    else:
+        # Initialize an initial joint condition -> change the 6 axis into 0
         init_joints = group_l.get_current_joint_values()
-        # In order to don't be close to the axis limit (-229 deg to +229 deg)
-        if init_joints[-1] < PI:
-            # Move of 15 deg
-            init_joints[-1] += PI/12
-            group_l.go(init_joints, wait=True)
-            group_l.stop()
-        else:
-            init_joints[-1] = -PI
-            group_l.go(init_joints, wait=True)
-            group_l.stop()
-    checker.answer_true()
+        init_joints[-1] = 0.0
+        group_l.go(init_joints, wait=True)
+        group_l.stop()
+        while not ok_received:
+            rospy.logdebug('entering in while, ok_received is: {}'.format(ok_received))
+            # Answer False when is not received the True from the BarcodeManager
+            checker.answer_false()
+            ok_received = checker.ok_received
+            init_joints = group_l.get_current_joint_values()
+            # In order to don't be close to the axis limit (-229 deg to +229 deg)
+            if init_joints[-1] < PI:
+                # Move of 15 deg
+                init_joints[-1] += PI/12
+                group_l.go(init_joints, wait=True)
+                group_l.stop()
+            else:
+                init_joints[-1] = -PI
+                group_l.go(init_joints, wait=True)
+                group_l.stop()
+        checker.answer_true()
 
 
 def tube_exchange():
