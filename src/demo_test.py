@@ -154,7 +154,7 @@ rendezvous_placing_pose = Pose()
 rendezvous_placing_pose.position.x = 0.3465
 rendezvous_placing_pose.position.y = 0.38090
 rendezvous_placing_pose.position.z = table_height + z_output_rack/2
-rendezvous_placing_pose.position.z += 0.100 + z_output_rack + z_gripper  # [m]
+rendezvous_placing_pose.position.z += 0.150 + z_output_rack + z_gripper  # [m]
 
 # Rotation of 45 degrees of the end effector: method of the matrix rotations
 R1 = euler_matrix(0, PI, 0)
@@ -289,7 +289,7 @@ def placing_L():
     gripper_effort(LEFT, -10)
     gripper_effort(LEFT, 0)
 
-    # Set the constraints for the picking:
+    # Set the constraints for the placing:
     # Setting the Orientation constraint
     rospy.logdebug('Setting the orientation constraint')
     oc_L = OrientationConstraint()
@@ -311,20 +311,22 @@ def placing_L():
     group_l.set_pose_target(rendezvous_placing_pose)
     reorient = group_l.plan()
     group_l.execute(reorient, wait=True)
+
     rospy.logdebug('Setted the orientation constraint')
-    # Go to pick position
+    # Go to place position
     rospy.logdebug('Go to place position: \n {}'.format(place))
     cartesian(place, group_l, constraint_list_L)
 
     # FIXME: This motion is problematic --> fixed but with placing will change theoretically will improve
     place_up = group_l.get_current_pose().pose
-    place.position.z = output_rack_pose.pose.position.z + z_output_rack/2 + 0.010 + z_gripper
+    place.position.z = output_rack_pose.pose.position.z + z_output_rack/2 + 0.050 + z_gripper
     group_l.set_max_velocity_scaling_factor(0.25)
     group_l.set_start_state_to_current_state()
     cartesian(place, group_l, constraint_list_L)
 
-    # picking: closing gripper
-    gripper_effort(LEFT, 10)
+    # placing: opening gripper
+    gripper_effort(LEFT, -10)
+    gripper_effort(LEFT, 0)
 
     # go up
     rospy.loginfo('going up')
@@ -333,11 +335,10 @@ def placing_L():
 
     # returning to rendezvous
     rospy.loginfo('going to rendezvous')
-    group_l.set_max_velocity_scaling_factor(1.0)
-    group_l.set_max_acceleration_scaling_factor(0.50)
     cartesian(rendezvous_placing_pose, group_l)
 
 
+# TODO: refactor
 def rendez_to_scan_L():
     # TODO: Add the constraint of the workspace
     group_l.set_start_state_to_current_state()
@@ -469,7 +470,7 @@ def move_R_right():
     oc_R = OrientationConstraint()
     oc_R.link_name = "gripper_r_base"
     oc_R.header.frame_id = "yumi_body"
-    oc_R.orientation = copy.deepcopy(home_R.orientation)
+    oc_R.orientation = copy.deepcopy(scan_R.orientation)
     oc_R.absolute_x_axis_tolerance = 0.1
     oc_R.absolute_y_axis_tolerance = 0.1
     oc_R.absolute_z_axis_tolerance = 0.1
