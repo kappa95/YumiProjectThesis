@@ -257,7 +257,8 @@ def cartesian(dest_pose, group, constraint=None):
         raise Exception('Exceeded the maximum number of retries')
 
 
-def picking_L():
+# FIXME: Revert the motion into a place motion
+def placing_L():
     rospy.loginfo('going to rendezvous placing pose: \n {}'.format(rendezvous_placing_pose))
     group_l.set_start_state_to_current_state()
 
@@ -459,7 +460,6 @@ def tube_exchange():
     plan_homeR_pose = group_r.plan()
     group_r.execute(plan_homeR_pose)
     group_r.stop()
-    # TODO: groupL: Go to the Buffer Position
 
 
 def run():
@@ -476,12 +476,13 @@ def run():
     rospy.sleep(1.0)
 
     return_home()
-    picking_L()
+    # Picking here
     rendez_to_scan_L()
     home_to_scan_R()
     # Remember to remove when simulate
     scanning()
     tube_exchange()
+    placing_L()
 
 
 if __name__ == '__main__':
