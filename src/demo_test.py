@@ -62,7 +62,7 @@ group_l.set_planner_id(planner)
 group_l.set_pose_reference_frame("yumi_body")
 
 # Setting the workspace
-group_l.set_workspace(ws=ws_L)
+# group_l.set_workspace(ws=ws_L)
 
 # Replanning
 group_l.allow_replanning(True)
@@ -321,11 +321,13 @@ def placing_L():
     constraint_list_L = Constraints()
     constraint_list_L.orientation_constraints = oc_L_list
 
-    group_l.set_max_velocity_scaling_factor(1.0)
-    group_l.set_max_acceleration_scaling_factor(1.0)
+    # group_l.set_max_velocity_scaling_factor(1.0)
+    # group_l.set_max_acceleration_scaling_factor(1.0)
+    rospy.logdebug('going to: rendezvous_placing_pose')
     group_l.set_pose_target(rendezvous_placing_pose)
     reorient = group_l.plan()
     group_l.execute(reorient, wait=True)
+    group_l.stop()
 
     rospy.logdebug('Setted the orientation constraint')
     # Go to place position
@@ -337,6 +339,7 @@ def placing_L():
     place.position.z = output_rack_pose.pose.position.z + z_output_rack/2 + 0.050 + z_gripper
     group_l.set_max_velocity_scaling_factor(0.25)
     group_l.set_start_state_to_current_state()
+    rospy.logdebug('Going to place bottom')
     cartesian(place, group_l, constraint_list_L)
 
     # placing: opening gripper
@@ -344,12 +347,12 @@ def placing_L():
     gripper_effort(LEFT, 0)
 
     # go up
-    rospy.loginfo('going up')
+    rospy.logdebug('going up')
     cartesian(place_up, group_l, constraint_list_L)
     group_l.clear_path_constraints()
 
     # returning to rendezvous
-    rospy.loginfo('going to rendezvous')
+    rospy.logdebug('going to rendezvous')
     cartesian(rendezvous_placing_pose, group_l)
 
 
@@ -375,7 +378,7 @@ def picking_L():
     reorient_pick = group_l.plan()
     group_l.execute(reorient_pick, wait=True)
     group_l.stop()
-    rospy.loginfo('Going to pick position')
+    rospy.logdebug('Going to pick position')
     cartesian(pick, group_l, constraint_list_L)
 
     # picking
@@ -405,8 +408,8 @@ def rendez_to_scan_L():
 
     reorient = group_l.get_current_joint_values()
     reorient[-1] += PI/4
+    rospy.logdebug('reorienting for scanning')
     group_l.set_joint_value_target(reorient)
-
     reorient_plan = group_l.plan(reorient)
     group_l.execute(reorient_plan, wait=True)
 
@@ -425,16 +428,23 @@ def rendez_to_scan_L():
     constraint_list_L = Constraints()
     constraint_list_L.orientation_constraints = oc_L_list
 
-    # Go to home
-    group_l.set_path_constraints(constraint_list_L)
-    group_l.set_start_state_to_current_state()
-    group_l.set_pose_target(home_L)
-    plan_rendezvous_home = group_l.plan()
-    group_l.execute(plan_rendezvous_home)
-    group_l.stop()
+    # # Go to home
+    # group_l.set_path_constraints(constraint_list_L)
+    # group_l.set_start_state_to_current_state()
+    # group_l.set_pose_target(home_L)
+    # plan_rendezvous_home = group_l.plan()
+    # group_l.execute(plan_rendezvous_home)
+    # group_l.stop()
 
     # Go to Scan
-    cartesian(scan_L, group_l, constraint_list_L)
+    group_l.set_path_constraints(constraint_list_L)
+    group_l.set_start_state_to_current_state()
+    group_l.set_pose_target(scan_L)
+    plan_rendezvous_scanL = group_l.plan()
+    group_l.execute(plan_rendezvous_scanL)
+    group_l.stop()
+    # cartesian(scan_L, group_l, constraint_list_L)
+    group_l.clear_path_constraints()
 
 
 def home_to_scan_R():
@@ -557,13 +567,20 @@ def run():
     scene.add_box("input_rack", input_rack_pose, size=(x_input_rack, y_input_rack, z_input_rack))
     rospy.sleep(1.0)
 
+    group_l.clear_path_constraints()
+    group_r.clear_path_constraints()
+    group_l.set_max_velocity_scaling_factor(1.0)
+    group_r.set_max_velocity_scaling_factor(1.0)
+    group_l.set_max_acceleration_scaling_factor(1.0)
+    group_r.set_max_acceleration_scaling_factor(1.0)
+
     return_home()
     move_R_right()
     picking_L()
     rendez_to_scan_L()
     home_to_scan_R()
-    # Remember to remove when simulate
-    scanning()
+    # Remember to comment when simulate
+    # scanning()
     placing_L()
 
 
