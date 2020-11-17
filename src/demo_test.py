@@ -226,31 +226,6 @@ scan_R.orientation.w = q_home_R[3]
 rospy.loginfo('Finished init')
 
 
-def return_home():
-    """
-    Return to the home position
-    :return:
-    """
-
-    # Opening the grippers
-    gripper_effort(LEFT, -10)
-    gripper_effort(LEFT, 0)
-
-    gripper_effort(RIGHT, -10)
-    gripper_effort(RIGHT, 0)
-
-    group_l.set_start_state_to_current_state()
-    group_l.set_pose_target(home_L)
-    group_l.go(wait=True)
-    group_l.stop()
-    group_l.clear_pose_target(group_l.get_end_effector_link())
-    group_r.set_start_state_to_current_state()
-    group_r.set_pose_target(home_R)
-    group_r.go(wait=True)
-    group_r.stop()
-    group_r.clear_pose_target(group_r.get_end_effector_link())
-
-
 def cartesian(dest_pose, group, constraint=None):
     # type: (geometry_msgs.msg.Pose , MoveGroupCommander, Any) -> None
     """
@@ -295,65 +270,53 @@ def cartesian(dest_pose, group, constraint=None):
         raise Exception('Exceeded the maximum number of retries')
 
 
-# FIXME: Revert the motion into a place motion
-def placing_L():
-    rospy.loginfo('going to rendezvous placing pose: \n {}'.format(rendezvous_placing_pose))
-    group_l.set_start_state_to_current_state()
+def return_home():
+    """
+    Return to the home position
+    :return:
+    """
 
-    # Open the gripper
+    # Opening the grippers
     gripper_effort(LEFT, -10)
     gripper_effort(LEFT, 0)
 
-    # Set the constraints for the placing:
+    gripper_effort(RIGHT, -10)
+    gripper_effort(RIGHT, 0)
+
+    group_l.set_start_state_to_current_state()
+    group_l.set_pose_target(home_L)
+    group_l.go(wait=True)
+    group_l.stop()
+    group_l.clear_pose_target(group_l.get_end_effector_link())
+    group_r.set_start_state_to_current_state()
+    group_r.set_pose_target(home_R)
+    group_r.go(wait=True)
+    group_r.stop()
+    group_r.clear_pose_target(group_r.get_end_effector_link())
+
+
+def move_R_right():
     # Setting the Orientation constraint
     rospy.logdebug('Setting the orientation constraint')
-    oc_L = OrientationConstraint()
-    oc_L.link_name = "gripper_l_base"
-    oc_L.header.frame_id = "yumi_body"
-    oc_L.orientation = copy.deepcopy(rendezvous_placing_pose.orientation)
-    oc_L.absolute_x_axis_tolerance = 0.1
-    oc_L.absolute_y_axis_tolerance = 0.1
-    oc_L.absolute_z_axis_tolerance = 0.1
-    oc_L.weight = 1.0
+    oc_R = OrientationConstraint()
+    oc_R.link_name = "gripper_r_base"
+    oc_R.header.frame_id = "yumi_body"
+    oc_R.orientation = copy.deepcopy(scan_R.orientation)
+    oc_R.absolute_x_axis_tolerance = 0.1
+    oc_R.absolute_y_axis_tolerance = 0.1
+    oc_R.absolute_z_axis_tolerance = 0.1
+    oc_R.weight = 1.0
     # Constraints should be a list
-    oc_L_list = [oc_L]
+    oc_R_list = [oc_R]
     # Declaring the object constraints
-    constraint_list_L = Constraints()
-    constraint_list_L.orientation_constraints = oc_L_list
-
-    # group_l.set_max_velocity_scaling_factor(1.0)
-    # group_l.set_max_acceleration_scaling_factor(1.0)
-    rospy.logdebug('going to: rendezvous_placing_pose')
-    group_l.set_pose_target(rendezvous_placing_pose)
-    reorient = group_l.plan()
-    group_l.execute(reorient, wait=True)
-    group_l.stop()
-
-    rospy.logdebug('Setted the orientation constraint')
-    # Go to place position
-    rospy.logdebug('Go to place position: \n {}'.format(place))
-    cartesian(place, group_l, constraint_list_L)
-
-    # FIXME: This motion is problematic --> fixed but with placing will change theoretically will improve
-    place_up = group_l.get_current_pose().pose
-    place.position.z = output_rack_pose.pose.position.z + z_output_rack/2 + 0.050 + z_gripper
-    group_l.set_max_velocity_scaling_factor(0.25)
-    group_l.set_start_state_to_current_state()
-    rospy.logdebug('Going to place bottom')
-    cartesian(place, group_l, constraint_list_L)
-
-    # placing: opening gripper
-    gripper_effort(LEFT, -10)
-    gripper_effort(LEFT, 0)
-
-    # go up
-    rospy.logdebug('going up')
-    cartesian(place_up, group_l, constraint_list_L)
-    group_l.clear_path_constraints()
-
-    # returning to rendezvous
-    rospy.logdebug('going to rendezvous')
-    cartesian(rendezvous_placing_pose, group_l)
+    constraint_list_R = Constraints()
+    constraint_list_R.orientation_constraints = oc_R_list
+    group_r.set_path_constraints(constraint_list_R)
+    group_r.shift_pose_target(1, -0.200)
+    plan_homeR_pose = group_r.plan()
+    group_r.execute(plan_homeR_pose)
+    group_r.stop()
+    group_r.clear_path_constraints()
 
 
 def picking_L():
@@ -528,29 +491,65 @@ def scanning():
         checker.answer_true()
 
 
-def move_R_right():
-    # Set the constraints for the scan:
+# FIXME: To check
+def placing_L():
+    rospy.loginfo('going to rendezvous placing pose: \n {}'.format(rendezvous_placing_pose))
+    group_l.set_start_state_to_current_state()
+
+    # Open the gripper
+    gripper_effort(LEFT, -10)
+    gripper_effort(LEFT, 0)
+
+    # Set the constraints for the placing:
     # Setting the Orientation constraint
     rospy.logdebug('Setting the orientation constraint')
-    oc_R = OrientationConstraint()
-    oc_R.link_name = "gripper_r_base"
-    oc_R.header.frame_id = "yumi_body"
-    oc_R.orientation = copy.deepcopy(scan_R.orientation)
-    oc_R.absolute_x_axis_tolerance = 0.1
-    oc_R.absolute_y_axis_tolerance = 0.1
-    oc_R.absolute_z_axis_tolerance = 0.1
-    oc_R.weight = 1.0
+    oc_L = OrientationConstraint()
+    oc_L.link_name = "gripper_l_base"
+    oc_L.header.frame_id = "yumi_body"
+    oc_L.orientation = copy.deepcopy(rendezvous_placing_pose.orientation)
+    oc_L.absolute_x_axis_tolerance = 0.1
+    oc_L.absolute_y_axis_tolerance = 0.1
+    oc_L.absolute_z_axis_tolerance = 0.1
+    oc_L.weight = 1.0
     # Constraints should be a list
-    oc_R_list = [oc_R]
+    oc_L_list = [oc_L]
     # Declaring the object constraints
-    constraint_list_R = Constraints()
-    constraint_list_R.orientation_constraints = oc_R_list
-    group_r.set_path_constraints(constraint_list_R)
-    group_r.shift_pose_target(1, -0.200)
-    plan_homeR_pose = group_r.plan()
-    group_r.execute(plan_homeR_pose)
-    group_r.stop()
-    group_r.clear_path_constraints()
+    constraint_list_L = Constraints()
+    constraint_list_L.orientation_constraints = oc_L_list
+
+    # group_l.set_max_velocity_scaling_factor(1.0)
+    # group_l.set_max_acceleration_scaling_factor(1.0)
+    rospy.logdebug('going to: rendezvous_placing_pose')
+    group_l.set_pose_target(rendezvous_placing_pose)
+    reorient = group_l.plan()
+    group_l.execute(reorient, wait=True)
+    group_l.stop()
+
+    rospy.logdebug('Setted the orientation constraint')
+    # Go to place position
+    rospy.logdebug('Go to place position: \n {}'.format(place))
+    cartesian(place, group_l, constraint_list_L)
+
+    # FIXME: This motion is problematic --> fixed but with placing will change theoretically will improve
+    place_up = group_l.get_current_pose().pose
+    place.position.z = output_rack_pose.pose.position.z + z_output_rack/2 + 0.050 + z_gripper
+    group_l.set_max_velocity_scaling_factor(0.25)
+    group_l.set_start_state_to_current_state()
+    rospy.logdebug('Going to place bottom')
+    cartesian(place, group_l, constraint_list_L)
+
+    # placing: opening gripper
+    gripper_effort(LEFT, -10)
+    gripper_effort(LEFT, 0)
+
+    # go up
+    rospy.logdebug('going up')
+    cartesian(place_up, group_l, constraint_list_L)
+    group_l.clear_path_constraints()
+
+    # returning to rendezvous
+    rospy.logdebug('going to rendezvous')
+    cartesian(rendezvous_placing_pose, group_l)
 
 
 def run():
@@ -582,6 +581,7 @@ def run():
     # Remember to comment when simulate
     # scanning()
     placing_L()
+    return_home()
 
 
 if __name__ == '__main__':
