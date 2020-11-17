@@ -362,7 +362,6 @@ def picking_L():
     group_l.clear_path_constraints()
 
 
-# TODO: theoretically this doesn't change
 def rendez_to_scan_L():
     # TODO: Add the constraint of the workspace
     group_l.set_start_state_to_current_state()
@@ -392,6 +391,7 @@ def rendez_to_scan_L():
     constraint_list_L = Constraints()
     constraint_list_L.orientation_constraints = oc_L_list
 
+    # TODO: check this part in order to make strong the code
     # # Go to home
     # group_l.set_path_constraints(constraint_list_L)
     # group_l.set_start_state_to_current_state()
@@ -482,7 +482,7 @@ def scanning():
             # In order to don't be close to the axis limit (-229 deg to +229 deg)
             if init_joints[-1] < PI:
                 # Move of 15 deg
-                init_joints[-1] += PI/12
+                init_joints[-1] += PI/6  # I want to test if 30deg are enough -> reduce time
                 group_l.go(init_joints, wait=True)
                 group_l.stop()
             else:
@@ -492,7 +492,6 @@ def scanning():
         checker.answer_true()
 
 
-# FIXME: To check
 def placing_L():
     rospy.loginfo('going to rendezvous placing pose: \n {}'.format(rendezvous_placing_pose))
     group_l.set_start_state_to_current_state()
@@ -527,7 +526,6 @@ def placing_L():
     rospy.logdebug('Go to place position: \n {}'.format(place))
     cartesian(place, group_l, constraint_list_L)
 
-    # FIXME: This motion is problematic --> fixed but with placing will change theoretically will improve
     place_up = group_l.get_current_pose().pose
     place.position.z = output_rack_pose.pose.position.z + z_output_rack/2 + 0.050 + z_gripper
     group_l.set_max_velocity_scaling_factor(0.25)
