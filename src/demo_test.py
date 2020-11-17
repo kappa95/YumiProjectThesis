@@ -355,7 +355,44 @@ def placing_L():
 
 def picking_L():
     group_l.set_start_state_to_current_state()
+    rospy.logdebug('From homeL to rendezvous picking')
+    # Setting the orientation constraint
+    oc_L = OrientationConstraint()
+    oc_L.link_name = "gripper_l_base"
+    oc_L.header.frame_id = "yumi_body"
+    oc_L.orientation = copy.deepcopy(rendezvous_pick_pose.orientation)
+    oc_L.absolute_x_axis_tolerance = 0.1
+    oc_L.absolute_y_axis_tolerance = 0.1
+    oc_L.absolute_z_axis_tolerance = 0.1
+    oc_L.weight = 1.0
+    # Constraints should be a list
+    oc_L_list = [oc_L]
+    # Declaring the object constraints
+    constraint_list_L = Constraints()
+    constraint_list_L.orientation_constraints = oc_L_list
+    # Going to Rendezvous picking
+    group_l.set_pose_target(rendezvous_pick_pose)
+    reorient_pick = group_l.plan()
+    group_l.execute(reorient_pick, wait=True)
+    group_l.stop()
+    rospy.loginfo('Going to pick position')
+    cartesian(pick, group_l, constraint_list_L)
 
+    # picking
+    pick_up = group_l.get_current_pose().pose
+    pick.position.z = input_rack_pose.pose.position.z + z_input_rack/2 + 0.050 + z_gripper
+    group_l.set_max_velocity_scaling_factor(0.25)
+    group_l.set_start_state_to_current_state()
+    cartesian(pick, group_l, constraint_list_L)
+
+    # Closing the fingers
+    gripper_effort(LEFT, 10)
+
+    # Return to pick up position
+    cartesian(pick_up, group_l, constraint_list_L)
+    # Return to rendezvous
+    cartesian(rendezvous_pick_pose, group_l, constraint_list_L)
+    group_l.clear_path_constraints()
 
 
 # TODO: theoretically this doesn't change
@@ -369,8 +406,6 @@ def rendez_to_scan_L():
     reorient = group_l.get_current_joint_values()
     reorient[-1] += PI/4
     group_l.set_joint_value_target(reorient)
-    # group_l.go(reorient, wait=True)
-    # group_l.stop()
 
     reorient_plan = group_l.plan(reorient)
     group_l.execute(reorient_plan, wait=True)
@@ -524,7 +559,7 @@ def run():
 
     return_home()
     move_R_right()
-    # Picking here
+    picking_L()
     rendez_to_scan_L()
     home_to_scan_R()
     # Remember to remove when simulate
