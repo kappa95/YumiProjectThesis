@@ -143,33 +143,48 @@ y_input_rack = 0.260  # [m]
 z_input_rack = 0.060  # [m]
 # Pose of the center
 input_rack_pose = PoseStamped()
-output_rack_pose.header.frame_id = "yumi_body"
-output_rack_pose.pose.position.x = 0.4163
-output_rack_pose.pose.position.y = 0.0385
-output_rack_pose.pose.position.z = table_height + z_output_rack/2
+input_rack_pose.header.frame_id = "yumi_body"
+input_rack_pose.pose.position.x = 0.4163
+input_rack_pose.pose.position.y = 0.0385
+input_rack_pose.pose.position.z = table_height + z_output_rack/2
 
 # Points useful: need to compute the pose
-# Rendezvous_placing_point: center of the rack at an height of 10 cm more
+# Rendezvous_placing_point: center of the rack at an height of 15 cm more
 rendezvous_placing_pose = Pose()
 rendezvous_placing_pose.position.x = 0.3465
 rendezvous_placing_pose.position.y = 0.38090
 rendezvous_placing_pose.position.z = table_height + z_output_rack/2
 rendezvous_placing_pose.position.z += 0.150 + z_output_rack + z_gripper  # [m]
 
+
 # Rotation of 45 degrees of the end effector: method of the matrix rotations
 R1 = euler_matrix(0, PI, 0)
 R2 = euler_matrix(0, 0, -PI / 4)
-quaternion_rendezvous_picking = quaternion_from_matrix(concatenate_matrices(R1, R2))
-rendezvous_placing_pose.orientation.x = quaternion_rendezvous_picking[0]
-rendezvous_placing_pose.orientation.y = quaternion_rendezvous_picking[1]
-rendezvous_placing_pose.orientation.z = quaternion_rendezvous_picking[2]
-rendezvous_placing_pose.orientation.w = quaternion_rendezvous_picking[3]
+quaternion_rendezvous_placing = quaternion_from_matrix(concatenate_matrices(R1, R2))
+rendezvous_placing_pose.orientation.x = quaternion_rendezvous_placing[0]
+rendezvous_placing_pose.orientation.y = quaternion_rendezvous_placing[1]
+rendezvous_placing_pose.orientation.z = quaternion_rendezvous_placing[2]
+rendezvous_placing_pose.orientation.w = quaternion_rendezvous_placing[3]
+
+# Rendezvous_placing_point = center of the input rack of an height of 10cm + half of the height
+rendezvous_pick_pose = Pose()
+rendezvous_pick_pose.position.x = input_rack_pose.pose.position.x
+rendezvous_pick_pose.position.y = input_rack_pose.pose.position.y
+rendezvous_pick_pose.position.z = input_rack_pose.pose.position.z + z_output_rack + z_gripper + 0.100
+# Orientation at 45 deg
+rendezvous_pick_pose.orientation = copy.deepcopy(rendezvous_placing_pose.orientation)
 
 # Picking input rack point A1
-# TODO: Think how to repeat programmatically the placing process
+pick = Pose()
+# TODO: Add the 2 dx, dy for the picking pose
+pick.position = copy.deepcopy(rendezvous_pick_pose.position)
+pick.position.x -= 0.042
+pick.position.y -= 0.110
+pick.orientation = copy.deepcopy(rendezvous_pick_pose.orientation)
+
 # Same column deltas of the output rack
-dx_tube = 0.02150  # [m]
-dy_tube = 0.0130  # [m]
+dx_tube_place = 0.02150  # [m]
+dy_tube_place = 0.0130  # [m]
 place = Pose()
 # TODO: TEST!!!! A1 POSE
 # TODO: Convert these positions for the output rack instead of the input
@@ -338,7 +353,12 @@ def placing_L():
     cartesian(rendezvous_placing_pose, group_l)
 
 
-# TODO: refactor
+def picking_L():
+    group_l.set_start_state_to_current_state()
+
+
+
+# TODO: theoretically this doesn't change
 def rendez_to_scan_L():
     # TODO: Add the constraint of the workspace
     group_l.set_start_state_to_current_state()
