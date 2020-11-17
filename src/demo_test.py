@@ -497,10 +497,6 @@ def placing_L():
     rospy.loginfo('going to rendezvous placing pose: \n {}'.format(rendezvous_placing_pose))
     group_l.set_start_state_to_current_state()
 
-    # Open the gripper
-    gripper_effort(LEFT, -10)
-    gripper_effort(LEFT, 0)
-
     # Set the constraints for the placing:
     # Setting the Orientation constraint
     rospy.logdebug('Setting the orientation constraint')
@@ -579,8 +575,10 @@ def run():
     picking_L()
     rendez_to_scan_L()
     home_to_scan_R()
+    rospy.loginfo('############SCAN#########')
     # Remember to comment when simulate
     # scanning()
+    rospy.loginfo('########POSTSCAN#######')
     placing_L()
     return_home()
 
