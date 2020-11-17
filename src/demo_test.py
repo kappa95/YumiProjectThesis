@@ -123,47 +123,47 @@ table_pose.pose.position.z = table_height / 2
 
 
 # Rack informations
-x_input_rack = 0.175
-y_input_rack = 0.260
-z_input_rack = 0.075
-input_rack_pose = PoseStamped()
-input_rack_pose.header.frame_id = "yumi_body"
-input_rack_pose.pose.position.x = 0.3465
-input_rack_pose.pose.position.y = 0.38090
-input_rack_pose.pose.position.z = table_height + z_input_rack/2
+x_output_rack = 0.175
+y_output_rack = 0.260
+z_output_rack = 0.075
+output_rack_pose = PoseStamped()
+output_rack_pose.header.frame_id = "yumi_body"
+output_rack_pose.pose.position.x = 0.3465
+output_rack_pose.pose.position.y = 0.38090
+output_rack_pose.pose.position.z = table_height + z_output_rack/2
 
 
 # Points useful: need to compute the pose
-# Rendezvous_picking_point: center of the rack at an height of 10 cm more
-rendezvous_picking_pose = Pose()
-rendezvous_picking_pose.position.x = 0.3465
-rendezvous_picking_pose.position.y = 0.38090
-rendezvous_picking_pose.position.z = table_height + z_input_rack/2
-rendezvous_picking_pose.position.z += 0.100 + z_input_rack + z_gripper  # [m]
+# Rendezvous_placing_point: center of the rack at an height of 10 cm more
+rendezvous_placing_pose = Pose()
+rendezvous_placing_pose.position.x = 0.3465
+rendezvous_placing_pose.position.y = 0.38090
+rendezvous_placing_pose.position.z = table_height + z_output_rack/2
+rendezvous_placing_pose.position.z += 0.100 + z_output_rack + z_gripper  # [m]
 
 # Rotation of 45 degrees of the end effector: method of the matrix rotations
 R1 = euler_matrix(0, PI, 0)
 R2 = euler_matrix(0, 0, -PI / 4)
 quaternion_rendezvous_picking = quaternion_from_matrix(concatenate_matrices(R1, R2))
-rendezvous_picking_pose.orientation.x = quaternion_rendezvous_picking[0]
-rendezvous_picking_pose.orientation.y = quaternion_rendezvous_picking[1]
-rendezvous_picking_pose.orientation.z = quaternion_rendezvous_picking[2]
-rendezvous_picking_pose.orientation.w = quaternion_rendezvous_picking[3]
+rendezvous_placing_pose.orientation.x = quaternion_rendezvous_picking[0]
+rendezvous_placing_pose.orientation.y = quaternion_rendezvous_picking[1]
+rendezvous_placing_pose.orientation.z = quaternion_rendezvous_picking[2]
+rendezvous_placing_pose.orientation.w = quaternion_rendezvous_picking[3]
 
 # Picking input rack point A1
 # TODO: Think how to repeat programmatically the placing process
 # Same column deltas of the output rack
 dx_tube = 0.02150  # [m]
 dy_tube = 0.0130  # [m]
-pick = Pose()
+place = Pose()
 # TODO: TEST!!!! A1 POSE
 # TODO: Convert these positions for the output rack instead of the input
-pick.position = copy.deepcopy(rendezvous_picking_pose.position)
-pick.position.x -= 0.0742  # [m]
-pick.position.y -= 0.1082  # [m]
+place.position = copy.deepcopy(rendezvous_placing_pose.position)
+place.position.x -= 0.0742  # [m]
+place.position.y -= 0.1082  # [m]
 # pick.position.x -= 0.115
 # pick.position.y -= 0.073
-pick.orientation = copy.deepcopy(rendezvous_picking_pose.orientation)
+place.orientation = copy.deepcopy(rendezvous_placing_pose.orientation)
 
 # Home points
 home_L = [0.300, 0.250, 0.380, 0, PI, 0]
@@ -258,7 +258,7 @@ def cartesian(dest_pose, group, constraint=None):
 
 
 def picking_L():
-    rospy.loginfo('going to rendezvous picking pose: \n {}'.format(rendezvous_picking_pose))
+    rospy.loginfo('going to rendezvous placing pose: \n {}'.format(rendezvous_placing_pose))
     group_l.set_start_state_to_current_state()
 
     # Open the gripper
@@ -271,7 +271,7 @@ def picking_L():
     oc_L = OrientationConstraint()
     oc_L.link_name = "gripper_l_base"
     oc_L.header.frame_id = "yumi_body"
-    oc_L.orientation = copy.deepcopy(rendezvous_picking_pose.orientation)
+    oc_L.orientation = copy.deepcopy(rendezvous_placing_pose.orientation)
     oc_L.absolute_x_axis_tolerance = 0.1
     oc_L.absolute_y_axis_tolerance = 0.1
     oc_L.absolute_z_axis_tolerance = 0.1
@@ -284,34 +284,34 @@ def picking_L():
 
     group_l.set_max_velocity_scaling_factor(1.0)
     group_l.set_max_acceleration_scaling_factor(1.0)
-    group_l.set_pose_target(rendezvous_picking_pose)
+    group_l.set_pose_target(rendezvous_placing_pose)
     reorient = group_l.plan()
     group_l.execute(reorient, wait=True)
     rospy.logdebug('Setted the orientation constraint')
     # Go to pick position
-    rospy.logdebug('Go to pick position: \n {}'.format(pick))
-    cartesian(pick, group_l, constraint_list_L)
+    rospy.logdebug('Go to place position: \n {}'.format(place))
+    cartesian(place, group_l, constraint_list_L)
 
-    # FIXME: This motion is problematic
-    pick_up = group_l.get_current_pose().pose
-    pick.position.z = input_rack_pose.pose.position.z + z_input_rack/2 + 0.010 + z_gripper
+    # FIXME: This motion is problematic --> fixed but with placing will change theoretically will improve
+    place_up = group_l.get_current_pose().pose
+    place.position.z = output_rack_pose.pose.position.z + z_output_rack/2 + 0.010 + z_gripper
     group_l.set_max_velocity_scaling_factor(0.25)
     group_l.set_start_state_to_current_state()
-    cartesian(pick, group_l, constraint_list_L)
+    cartesian(place, group_l, constraint_list_L)
 
     # picking: closing gripper
     gripper_effort(LEFT, 10)
 
     # go up
     rospy.loginfo('going up')
-    cartesian(pick_up, group_l, constraint_list_L)
+    cartesian(place_up, group_l, constraint_list_L)
     group_l.clear_path_constraints()
 
     # returning to rendezvous
     rospy.loginfo('going to rendezvous')
     group_l.set_max_velocity_scaling_factor(1.0)
     group_l.set_max_acceleration_scaling_factor(0.50)
-    cartesian(rendezvous_picking_pose, group_l)
+    cartesian(rendezvous_placing_pose, group_l)
 
 
 def rendez_to_scan_L():
@@ -470,9 +470,9 @@ def run():
     global scene
     global mpr
 
-    rospy.loginfo('Adding the table and input rack objects')
+    rospy.loginfo('Adding the table and racks objects')
     scene.add_box("table", table_pose, size=(table_width, 1.2, table_height))
-    scene.add_box("input_rack", input_rack_pose, size=(x_input_rack, y_input_rack, z_input_rack))
+    scene.add_box("input_rack", output_rack_pose, size=(x_output_rack, y_output_rack, z_output_rack))
     rospy.sleep(1.0)
 
     return_home()
