@@ -108,6 +108,7 @@ rospy.sleep(1.0)
 rospy.loginfo('Cleaning of the objects in the scene')
 try:
     scene.remove_world_object("table")
+    scene.remove_world_object("output_rack")
     scene.remove_world_object("input_rack")
 except Exception as e:
     print(e)
@@ -123,15 +124,29 @@ table_pose.pose.position.z = table_height / 2
 
 
 # Rack informations
+# Output rack
+# Dimensions
 x_output_rack = 0.175
 y_output_rack = 0.260
 z_output_rack = 0.075
+# Pose of the center
 output_rack_pose = PoseStamped()
 output_rack_pose.header.frame_id = "yumi_body"
 output_rack_pose.pose.position.x = 0.3465
 output_rack_pose.pose.position.y = 0.38090
 output_rack_pose.pose.position.z = table_height + z_output_rack/2
 
+# Input rack
+# Dimensions
+x_input_rack = 0.130  # [m]
+y_input_rack = 0.260  # [m]
+z_input_rack = 0.060  # [m]
+# Pose of the center
+input_rack_pose = PoseStamped()
+output_rack_pose.header.frame_id = "yumi_body"
+output_rack_pose.pose.position.x = 0.4163
+output_rack_pose.pose.position.y = 0.0385
+output_rack_pose.pose.position.z = table_height + z_output_rack/2
 
 # Points useful: need to compute the pose
 # Rendezvous_placing_point: center of the rack at an height of 10 cm more
@@ -201,6 +216,14 @@ def return_home():
     Return to the home position
     :return:
     """
+
+    # Opening the grippers
+    gripper_effort(LEFT, -10)
+    gripper_effort(LEFT, 0)
+
+    gripper_effort(RIGHT, -10)
+    gripper_effort(RIGHT, 0)
+
     group_l.set_start_state_to_current_state()
     group_l.set_pose_target(home_L)
     group_l.go(wait=True)
@@ -472,7 +495,7 @@ def run():
 
     rospy.loginfo('Adding the table and racks objects')
     scene.add_box("table", table_pose, size=(table_width, 1.2, table_height))
-    scene.add_box("input_rack", output_rack_pose, size=(x_output_rack, y_output_rack, z_output_rack))
+    scene.add_box("output_rack", output_rack_pose, size=(x_output_rack, y_output_rack, z_output_rack))
     rospy.sleep(1.0)
 
     return_home()
