@@ -297,6 +297,7 @@ def return_home():
 
 def move_R_right():
     # Setting the Orientation constraint
+    rospy.loginfo('move_R_right')
     rospy.logdebug('Setting the orientation constraint')
     oc_R = OrientationConstraint()
     oc_R.link_name = "gripper_r_base"
@@ -574,7 +575,7 @@ def run():
     group_r.set_max_acceleration_scaling_factor(1.0)
 
     return_home()
-    move_R_right()
+    # move_R_right()
     picking_L()
     rendez_to_scan_L()
     home_to_scan_R()
