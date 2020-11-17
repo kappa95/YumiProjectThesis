@@ -462,14 +462,14 @@ def scanning():
         checker.answer_true()
 
 
-def tube_exchange():
+def move_R_right():
     # Set the constraints for the scan:
     # Setting the Orientation constraint
     rospy.logdebug('Setting the orientation constraint')
     oc_R = OrientationConstraint()
     oc_R.link_name = "gripper_r_base"
     oc_R.header.frame_id = "yumi_body"
-    oc_R.orientation = copy.deepcopy(scan_R.orientation)
+    oc_R.orientation = copy.deepcopy(home_R.orientation)
     oc_R.absolute_x_axis_tolerance = 0.1
     oc_R.absolute_y_axis_tolerance = 0.1
     oc_R.absolute_z_axis_tolerance = 0.1
@@ -479,10 +479,12 @@ def tube_exchange():
     # Declaring the object constraints
     constraint_list_R = Constraints()
     constraint_list_R.orientation_constraints = oc_R_list
+    group_r.set_path_constraints(constraint_list_R)
     group_r.shift_pose_target(1, -0.200)
     plan_homeR_pose = group_r.plan()
     group_r.execute(plan_homeR_pose)
     group_r.stop()
+    group_r.clear_path_constraints()
 
 
 def run():
@@ -496,15 +498,16 @@ def run():
     rospy.loginfo('Adding the table and racks objects')
     scene.add_box("table", table_pose, size=(table_width, 1.2, table_height))
     scene.add_box("output_rack", output_rack_pose, size=(x_output_rack, y_output_rack, z_output_rack))
+    scene.add_box("input_rack", input_rack_pose, size=(x_input_rack, y_input_rack, z_input_rack))
     rospy.sleep(1.0)
 
     return_home()
+    move_R_right()
     # Picking here
     rendez_to_scan_L()
     home_to_scan_R()
     # Remember to remove when simulate
     scanning()
-    tube_exchange()
     placing_L()
 
 
