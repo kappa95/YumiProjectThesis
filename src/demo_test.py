@@ -240,11 +240,11 @@ def cartesian(dest_pose, group, constraint=None):
     wpose = copy.deepcopy(group.get_current_pose().pose)
     # Initialize start pose: Pose object
     start_pose = copy.deepcopy(group.get_current_pose().pose)
-    # Divide the steps in 4 parts
-    for i in xrange(4):
-        wpose.position.x += (dest_pose.position.x - start_pose.position.x) * 0.25
-        wpose.position.y += (dest_pose.position.y - start_pose.position.y) * 0.25
-        wpose.position.z += (dest_pose.position.z - start_pose.position.z) * 0.25
+    # Divide the steps in 2 parts
+    for i in xrange(2):
+        wpose.position.x += (dest_pose.position.x - start_pose.position.x) * 0.5
+        wpose.position.y += (dest_pose.position.y - start_pose.position.y) * 0.5
+        wpose.position.z += (dest_pose.position.z - start_pose.position.z) * 0.5
         waypoints.append(copy.deepcopy(wpose))
         rospy.logdebug('punto {} e\': \n {}'.format(i, waypoints[i]))
     fraction = 0.0
