@@ -180,6 +180,8 @@ pick = Pose()
 pick.position = copy.deepcopy(rendezvous_pick_pose.position)
 pick.position.x -= 0.042
 pick.position.y -= 0.110
+# pick.position.x = 0.36550
+# pick.position.y = -0.05178
 pick.orientation = copy.deepcopy(rendezvous_pick_pose.orientation)
 
 # Same column deltas of the output rack
@@ -248,7 +250,7 @@ def cartesian(dest_pose, group, constraint=None):
     fraction = 0.0
     attempts = 0
     plan = None
-    while fraction < 1.0 and attempts < 5 * planning_attempts:
+    while fraction < 1.0 and attempts < 7 * planning_attempts:
         attempts += 1
         (plan, fraction) = group.compute_cartesian_path(waypoints,
                                                         0.01,  # eef step: 1cm
@@ -320,18 +322,33 @@ def picking_L():
 
     # picking
     pick_up = group_l.get_current_pose().pose
-    pick.position.z = input_rack_pose.pose.position.z + z_input_rack/2 + 0.050 + z_gripper
+    # in picking up should go higher a lot...
+    pick_up.position.z += 0.050
+    pick.position.z = input_rack_pose.pose.position.z + z_input_rack/2 + 0.020 + z_gripper
+    # Compensators
+    # pick.position.x -= 0.005
+    pick.position.y += 0.010
+    # pick.position.x -= 0.005
+    # pick.position.y -= 0.010
+
+    group_l.set_max_acceleration_scaling_factor(0.10)
     group_l.set_max_velocity_scaling_factor(0.25)
     group_l.set_start_state_to_current_state()
     cartesian(pick, group_l, constraint_list_L)
 
+    rospy.logdebug('CHECK MEASUREMENTS')
+    rospy.sleep(20)
+
     # Closing the fingers
-    gripper_effort(LEFT, 10)
+    gripper_effort(LEFT, 5)
+    rospy.sleep(0.1)
 
     # Return to pick up position
     cartesian(pick_up, group_l, constraint_list_L)
     # Return to rendezvous
-    cartesian(rendezvous_pick_pose, group_l, constraint_list_L)
+    rendezvous_up = rendezvous_pick_pose
+    rendezvous_up.position.z += 0.050
+    cartesian(rendezvous_up, group_l, constraint_list_L)
     group_l.clear_path_constraints()
 
 
@@ -345,9 +362,14 @@ def rendez_to_scan_L():
     reorient = group_l.get_current_joint_values()
     reorient[-1] += PI/4
     rospy.logdebug('reorienting for scanning')
-    group_l.set_joint_value_target(reorient)
-    reorient_plan = group_l.plan(reorient)
-    group_l.execute(reorient_plan, wait=True)
+    try:
+        group_l.set_joint_value_target(reorient)
+    except MoveItCommanderException:
+        rospy.logerr('Raised reorient exception')
+        group_l.set_joint_value_target(reorient)
+    finally:
+        reorient_plan = group_l.plan(reorient)
+        group_l.execute(reorient_plan, wait=True)
 
     # Keep the orientation constraint
     oc_home_L = OrientationConstraint()
