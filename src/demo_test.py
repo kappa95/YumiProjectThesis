@@ -293,31 +293,6 @@ def return_home():
     group_r.clear_pose_target(group_r.get_end_effector_link())
 
 
-def move_R_right():
-    # Setting the Orientation constraint
-    rospy.loginfo('move_R_right')
-    rospy.logdebug('Setting the orientation constraint')
-    oc_R = OrientationConstraint()
-    oc_R.link_name = "gripper_r_base"
-    oc_R.header.frame_id = "yumi_body"
-    oc_R.orientation = copy.deepcopy(scan_R.orientation)
-    oc_R.absolute_x_axis_tolerance = 0.1
-    oc_R.absolute_y_axis_tolerance = 0.1
-    oc_R.absolute_z_axis_tolerance = 0.1
-    oc_R.weight = 1.0
-    # Constraints should be a list
-    oc_R_list = [oc_R]
-    # Declaring the object constraints
-    constraint_list_R = Constraints()
-    constraint_list_R.orientation_constraints = oc_R_list
-    group_r.set_path_constraints(constraint_list_R)
-    group_r.shift_pose_target(1, -0.200)
-    plan_homeR_pose = group_r.plan()
-    group_r.execute(plan_homeR_pose)
-    group_r.stop()
-    group_r.clear_path_constraints()
-
-
 def picking_L():
     group_l.set_start_state_to_current_state()
     rospy.logdebug('From homeL to rendezvous picking')
@@ -467,6 +442,7 @@ def scanning():
         checker.answer_true()
     else:
         # Initialize an initial joint condition -> change the 6 axis into 0
+        group_l.set_start_state_to_current_state()
         init_joints = group_l.get_current_joint_values()
         init_joints[-1] = 0.0
         group_l.go(init_joints, wait=True)
@@ -567,7 +543,6 @@ def run():
     group_r.set_max_acceleration_scaling_factor(1.0)
 
     return_home()
-    # move_R_right()
     picking_L()
     rendez_to_scan_L()
     home_to_scan_R()
