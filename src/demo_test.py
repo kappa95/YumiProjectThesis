@@ -32,9 +32,9 @@ z_cam = 0.040  # [m]
 length_tube = 0.125  # [m]
 
 # Choice of the planners
-# planner = "RRTstarkConfigDefault"  # Asymptotic optimal tree-based planner
+planner = "RRTstarkConfigDefault"  # Asymptotic optimal tree-based planner
 # planner = "ESTkConfigDefault"  # Default: tree-based planner
-planner = "RRTConnectConfigDefault"  # Tree-based planner
+# planner = "RRTConnectConfigDefault"  # Tree-based planner
 # planner = "PRMstarkConfigDefault"  # Probabilistic Roadmap planner
 
 planning_attempts = 100  # planning attempts
@@ -65,8 +65,8 @@ group_l.set_pose_reference_frame("yumi_body")
 # group_l.set_workspace(ws=ws_L)
 
 # Replanning
-group_l.allow_replanning(True)
-group_l.set_goal_tolerance(0.005)
+group_l.allow_replanning(False)
+# group_l.set_goal_tolerance(0.005)
 # group_l.set_num_planning_attempts(planning_attempts)
 # group_l.set_planning_time(planning_time)
 
@@ -323,21 +323,23 @@ def picking_L():
     # picking
     pick_up = group_l.get_current_pose().pose
     # in picking up should go higher a lot...
-    pick_up.position.z += 0.050
-    pick.position.z = input_rack_pose.pose.position.z + z_input_rack/2 + 0.020 + z_gripper
+    pick_up.position.z += 0.060
+    pick_compensated = copy.deepcopy(pick)
+    # risolvo errore logico del pick
+    pick_compensated.position.z = input_rack_pose.pose.position.z + z_input_rack / 2 + 0.020 + z_gripper
+    # pick.position.z = input_rack_pose.pose.position.z + z_input_rack/2 + 0.020 + z_gripper
     # Compensators
-    # pick.position.x -= 0.005
-    pick.position.y += 0.010
-    # pick.position.x -= 0.005
-    # pick.position.y -= 0.010
+    # pick_compensated.position.y += 0.010
 
     group_l.set_max_acceleration_scaling_factor(0.10)
     group_l.set_max_velocity_scaling_factor(0.25)
     group_l.set_start_state_to_current_state()
-    cartesian(pick, group_l, constraint_list_L)
+
+    cartesian(pick_compensated, group_l, constraint_list_L)
+    # cartesian(pick, group_l, constraint_list_L)
 
     rospy.logdebug('CHECK MEASUREMENTS')
-    rospy.sleep(20)
+    # rospy.sleep(20)
 
     # Closing the fingers
     gripper_effort(LEFT, 5)
@@ -365,9 +367,11 @@ def rendez_to_scan_L():
     try:
         group_l.set_joint_value_target(reorient)
     except MoveItCommanderException:
+        reorient[-1] = PI
         rospy.logerr('Raised reorient exception')
         group_l.set_joint_value_target(reorient)
     finally:
+        rospy.logdebug('plan reorient')
         reorient_plan = group_l.plan(reorient)
         group_l.execute(reorient_plan, wait=True)
 
@@ -376,9 +380,9 @@ def rendez_to_scan_L():
     oc_home_L.link_name = "gripper_l_base"
     oc_home_L.header.frame_id = "yumi_body"
     oc_home_L.orientation = copy.deepcopy(group_l.get_current_pose(oc_home_L.link_name).pose.orientation)
-    oc_home_L.absolute_x_axis_tolerance = 0.1
-    oc_home_L.absolute_y_axis_tolerance = 0.1
-    oc_home_L.absolute_z_axis_tolerance = 0.1
+    oc_home_L.absolute_x_axis_tolerance = 0.05
+    oc_home_L.absolute_y_axis_tolerance = 0.05
+    oc_home_L.absolute_z_axis_tolerance = 0.05
     oc_home_L.weight = 1.0
     # Constraints should be a list
     oc_L_list = [oc_home_L]
@@ -577,6 +581,10 @@ def run():
 
 
 if __name__ == '__main__':
-    run()
-    rospy.loginfo('finished')
-    roscpp_shutdown()
+    try:
+        for x in xrange(2):
+            run()
+        rospy.loginfo('finished')
+        roscpp_shutdown()
+    except KeyboardInterrupt:
+        roscpp_shutdown()
