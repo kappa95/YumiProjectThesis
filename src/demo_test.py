@@ -178,10 +178,11 @@ rendezvous_pick_pose.orientation = copy.deepcopy(rendezvous_placing_pose.orienta
 pick = Pose()
 # TODO: Add the 2 dx, dy for the picking pose
 pick.position = copy.deepcopy(rendezvous_pick_pose.position)
-pick.position.x -= 0.042
-pick.position.y -= 0.110
-# pick.position.x = 0.36550
-# pick.position.y = -0.05178
+# pick.position.x -= 0.042
+# pick.position.y -= 0.110
+# EXPERIMENTAL
+pick.position.x = 0.36641
+pick.position.y = -0.06911
 pick.orientation = copy.deepcopy(rendezvous_pick_pose.orientation)
 
 # Same column deltas of the output rack
@@ -344,7 +345,9 @@ def picking_L():
     # Closing the fingers
     gripper_effort(LEFT, 5)
     rospy.sleep(0.1)
-
+    print('STATO ATTUALE: {}'.format(group_l.get_current_pose().pose.position))
+    print('OBIETTIVO: {}'.format(pick_compensated.position))
+    rospy.sleep(5.0)
     # Return to pick up position
     cartesian(pick_up, group_l, constraint_list_L)
     # Return to rendezvous
