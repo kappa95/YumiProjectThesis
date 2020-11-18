@@ -32,9 +32,9 @@ z_cam = 0.040  # [m]
 length_tube = 0.125  # [m]
 
 # Choice of the planners
-planner = "RRTstarkConfigDefault"  # Asymptotic optimal tree-based planner
+# planner = "RRTstarkConfigDefault"  # Asymptotic optimal tree-based planner
 # planner = "ESTkConfigDefault"  # Default: tree-based planner
-# planner = "RRTConnectConfigDefault"  # Tree-based planner
+planner = "RRTConnectConfigDefault"  # Tree-based planner
 # planner = "PRMstarkConfigDefault"  # Probabilistic Roadmap planner
 
 planning_attempts = 100  # planning attempts
@@ -355,59 +355,14 @@ def picking_L():
 
 
 def rendez_to_scan_L():
-    # TODO: Add the constraint of the workspace
     group_l.set_start_state_to_current_state()
     rospy.loginfo('starting from the rendezvous picking position')
     # reorient for barcode Scanning
-    rospy.logdebug('reorient for barcode scanning')
-
-    reorient = group_l.get_current_joint_values()
-    reorient[-1] += PI/4
-    rospy.logdebug('reorienting for scanning')
-    try:
-        group_l.set_joint_value_target(reorient)
-    except MoveItCommanderException:
-        reorient[-1] = PI
-        rospy.logerr('Raised reorient exception')
-        group_l.set_joint_value_target(reorient)
-    finally:
-        rospy.logdebug('plan reorient')
-        reorient_plan = group_l.plan(reorient)
-        group_l.execute(reorient_plan, wait=True)
-
-    # Keep the orientation constraint
-    oc_home_L = OrientationConstraint()
-    oc_home_L.link_name = "gripper_l_base"
-    oc_home_L.header.frame_id = "yumi_body"
-    oc_home_L.orientation = copy.deepcopy(group_l.get_current_pose(oc_home_L.link_name).pose.orientation)
-    oc_home_L.absolute_x_axis_tolerance = 0.05
-    oc_home_L.absolute_y_axis_tolerance = 0.05
-    oc_home_L.absolute_z_axis_tolerance = 0.05
-    oc_home_L.weight = 1.0
-    # Constraints should be a list
-    oc_L_list = [oc_home_L]
-    # Declaring the object constraints
-    constraint_list_L = Constraints()
-    constraint_list_L.orientation_constraints = oc_L_list
-
-    # TODO: check this part in order to make strong the code
-    # # Go to home
-    # group_l.set_path_constraints(constraint_list_L)
-    # group_l.set_start_state_to_current_state()
-    # group_l.set_pose_target(home_L)
-    # plan_rendezvous_home = group_l.plan()
-    # group_l.execute(plan_rendezvous_home)
-    # group_l.stop()
-
-    # Go to Scan
-    group_l.set_path_constraints(constraint_list_L)
-    group_l.set_start_state_to_current_state()
+    rospy.logdebug('going to scanL')
     group_l.set_pose_target(scan_L)
     plan_rendezvous_scanL = group_l.plan()
     group_l.execute(plan_rendezvous_scanL)
     group_l.stop()
-    # cartesian(scan_L, group_l, constraint_list_L)
-    group_l.clear_path_constraints()
 
 
 def home_to_scan_R():
