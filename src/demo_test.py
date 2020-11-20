@@ -328,7 +328,6 @@ def picking_L():
     pick_compensated = copy.deepcopy(pick)
     # risolvo errore logico del pick
     pick_compensated.position.z = input_rack_pose.pose.position.z + z_input_rack / 2 + 0.020 + z_gripper
-    # pick.position.z = input_rack_pose.pose.position.z + z_input_rack/2 + 0.020 + z_gripper
     # Compensators
     # pick_compensated.position.y += 0.010
 
@@ -337,7 +336,6 @@ def picking_L():
     group_l.set_start_state_to_current_state()
 
     cartesian(pick_compensated, group_l, constraint_list_L)
-    # cartesian(pick, group_l, constraint_list_L)
 
     rospy.logdebug('CHECK MEASUREMENTS')
     # rospy.sleep(20)
@@ -361,11 +359,37 @@ def rendez_to_scan_L():
     group_l.set_start_state_to_current_state()
     rospy.loginfo('starting from the rendezvous picking position')
     # reorient for barcode Scanning
-    rospy.logdebug('going to scanL')
+    rospy.logdebug('reorient for barcode scanning')
+    reorient = group_l.get_current_joint_values()
+    reorient[-1] += PI/4
+    rospy.logdebug('reorienting for scanning')
+    group_l.set_joint_value_target(reorient)
+    reorient_plan = group_l.plan(reorient)
+    group_l.execute(reorient_plan, wait=True)
+
+    # Keep the orientation constraint
+    oc_home_L = OrientationConstraint()
+    oc_home_L.link_name = "gripper_l_base"
+    oc_home_L.header.frame_id = "yumi_body"
+    oc_home_L.orientation = copy.deepcopy(group_l.get_current_pose(oc_home_L.link_name).pose.orientation)
+    oc_home_L.absolute_x_axis_tolerance = 0.1
+    oc_home_L.absolute_y_axis_tolerance = 0.1
+    oc_home_L.absolute_z_axis_tolerance = 0.1
+    oc_home_L.weight = 1.0
+    # Constraints should be a list
+    oc_L_list = [oc_home_L]
+    # Declaring the object constraints
+    constraint_list_L = Constraints()
+    constraint_list_L.orientation_constraints = oc_L_list
+    # Go to Scan
+    group_l.set_path_constraints(constraint_list_L)
+    group_l.set_start_state_to_current_state()
     group_l.set_pose_target(scan_L)
     plan_rendezvous_scanL = group_l.plan()
     group_l.execute(plan_rendezvous_scanL)
     group_l.stop()
+    # cartesian(scan_L, group_l, constraint_list_L)
+    group_l.clear_path_constraints()
 
 
 def home_to_scan_R():
