@@ -360,10 +360,12 @@ def rendez_to_scan_L():
     rospy.loginfo('starting from the rendezvous picking position')
     # reorient for barcode Scanning
     rospy.logdebug('reorient for barcode scanning')
-    reorient = group_l.get_current_joint_values()
-    reorient[-1] += PI/4
-    rospy.logdebug('reorienting for scanning')
-    group_l.set_joint_value_target(reorient)
+    # reorient = group_l.get_current_joint_values()
+    # reorient[-1] += PI/4
+    # rospy.logdebug('reorienting for scanning')
+    # group_l.set_joint_value_target(reorient)
+    reorient = group_l.get_current_pose()
+    reorient.pose.orientation = copy.deepcopy(scan_L.orientation)
     reorient_plan = group_l.plan(reorient)
     group_l.execute(reorient_plan, wait=True)
 
