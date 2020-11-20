@@ -357,6 +357,20 @@ def picking_L():
 
 def rendez_to_scan_L():
     group_l.set_start_state_to_current_state()
+    # Keep the orientation constraint
+    oc_home_L = OrientationConstraint()
+    oc_home_L.link_name = "gripper_l_base"
+    oc_home_L.header.frame_id = "yumi_body"
+    oc_home_L.orientation = copy.deepcopy(group_l.get_current_pose(oc_home_L.link_name).pose.orientation)
+    oc_home_L.absolute_x_axis_tolerance = 0.05
+    oc_home_L.absolute_y_axis_tolerance = 0.05
+    oc_home_L.absolute_z_axis_tolerance = 0.05
+    oc_home_L.weight = 1.0
+    # Constraints should be a list
+    oc_L_list = [oc_home_L]
+    # Declaring the object constraints
+    constraint_list_L = Constraints()
+    constraint_list_L.orientation_constraints = oc_L_list
     rospy.loginfo('starting from the rendezvous picking position')
     # reorient for barcode Scanning
     rospy.logdebug('reorient for barcode scanning')
@@ -366,25 +380,10 @@ def rendez_to_scan_L():
     # group_l.set_joint_value_target(reorient)
     reorient = group_l.get_current_pose()
     reorient.pose.orientation = copy.deepcopy(scan_L.orientation)
+    group_l.set_path_constraints(constraint_list_L)
     reorient_plan = group_l.plan(reorient)
     group_l.execute(reorient_plan, wait=True)
-
-    # Keep the orientation constraint
-    oc_home_L = OrientationConstraint()
-    oc_home_L.link_name = "gripper_l_base"
-    oc_home_L.header.frame_id = "yumi_body"
-    oc_home_L.orientation = copy.deepcopy(group_l.get_current_pose(oc_home_L.link_name).pose.orientation)
-    oc_home_L.absolute_x_axis_tolerance = 0.1
-    oc_home_L.absolute_y_axis_tolerance = 0.1
-    oc_home_L.absolute_z_axis_tolerance = 0.1
-    oc_home_L.weight = 1.0
-    # Constraints should be a list
-    oc_L_list = [oc_home_L]
-    # Declaring the object constraints
-    constraint_list_L = Constraints()
-    constraint_list_L.orientation_constraints = oc_L_list
     # Go to Scan
-    group_l.set_path_constraints(constraint_list_L)
     group_l.set_start_state_to_current_state()
     group_l.set_pose_target(scan_L)
     plan_rendezvous_scanL = group_l.plan()
