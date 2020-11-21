@@ -61,14 +61,8 @@ group_l = MoveGroupCommander("left_arm")
 group_l.set_planner_id(planner)
 group_l.set_pose_reference_frame("yumi_body")
 
-# Setting the workspace
-# group_l.set_workspace(ws=ws_L)
-
 # Replanning
 group_l.allow_replanning(True)
-# group_l.set_goal_tolerance(0.005)
-# group_l.set_num_planning_attempts(planning_attempts)
-# group_l.set_planning_time(planning_time)
 
 # Right arm
 group_r = MoveGroupCommander("right_arm")
@@ -81,10 +75,6 @@ group_r.set_workspace(ws=ws_R)
 
 # Replanning
 group_r.allow_replanning(True)
-group_r.set_goal_position_tolerance(0.001)
-# group_r.set_goal_tolerance(0.005)
-group_r.set_num_planning_attempts(planning_attempts)
-group_r.set_planning_time(planning_time)
 
 # Both arms
 group_both = MoveGroupCommander("both_arms")
@@ -93,11 +83,6 @@ group_both.set_planner_id(planner)
 
 # Pose reference frame is the yumi_body
 group_both.set_pose_reference_frame("yumi_body")
-# Replanning
-group_both.allow_replanning(True)
-group_both.set_goal_tolerance(0.005)
-group_both.set_num_planning_attempts(planning_attempts)
-group_both.set_planning_time(planning_time)
 
 # Publish the trajectory on Rviz
 rospy.Publisher('/move_group/display_planned_path', moveit_msgs.msg.DisplayTrajectory, queue_size=20)
@@ -181,7 +166,7 @@ pick = Pose()
 pick.position = copy.deepcopy(rendezvous_pick_pose.position)
 # pick.position.x -= 0.042
 # pick.position.y -= 0.110
-# EXPERIMENTAL
+# EXPERIMENTAL Values
 pick.position.x = 0.36641
 pick.position.y = -0.06911
 pick.orientation = copy.deepcopy(rendezvous_pick_pose.orientation)
@@ -189,9 +174,9 @@ pick.orientation = copy.deepcopy(rendezvous_pick_pose.orientation)
 # Same column deltas of the output rack
 dx_tube_place = 0.02150  # [m]
 dy_tube_place = 0.0130  # [m]
+
 place = Pose()
-# TODO: TEST!!!! A1 POSE
-# TODO: Convert these positions for the output rack instead of the input
+# TODO: Take the real A1 Place pose
 place.position = copy.deepcopy(rendezvous_placing_pose.position)
 place.position.x -= 0.0742  # [m]
 place.position.y -= 0.1082  # [m]
@@ -248,11 +233,11 @@ def cartesian(dest_pose, group, constraint=None):
         wpose.position.y += (dest_pose.position.y - start_pose.position.y) * 0.5
         wpose.position.z += (dest_pose.position.z - start_pose.position.z) * 0.5
         waypoints.append(copy.deepcopy(wpose))
-        rospy.logdebug('punto {} e\': \n {}'.format(i, waypoints[i]))
+        # rospy.logdebug('punto {} e\': \n {}'.format(i, waypoints[i]))
     fraction = 0.0
     attempts = 0
     plan = None
-    while fraction < 1.0 and attempts < 7 * planning_attempts:
+    while fraction < 1.0 and attempts < 8 * planning_attempts:
         attempts += 1
         (plan, fraction) = group.compute_cartesian_path(waypoints,
                                                         0.01,  # eef step: 1cm
@@ -314,6 +299,7 @@ def picking_L():
     # Declaring the object constraints
     constraint_list_L = Constraints()
     constraint_list_L.orientation_constraints = oc_L_list
+
     # Going to Rendezvous picking
     group_l.set_pose_target(rendezvous_pick_pose)
     reorient_pick = group_l.plan()
@@ -326,9 +312,9 @@ def picking_L():
     pick_up = group_l.get_current_pose().pose
     # in picking up should go higher a lot...
     pick_up.position.z += 0.060
-    pick_compensated = copy.deepcopy(pick)
+    pick_new = copy.deepcopy(pick)
     # risolvo errore logico del pick
-    pick_compensated.position.z = input_rack_pose.pose.position.z + z_input_rack / 2 + 0.020 + z_gripper
+    pick_new.position.z = input_rack_pose.pose.position.z + z_input_rack / 2 + 0.020 + z_gripper
     # Compensators
     # pick_compensated.position.y += 0.010
 
@@ -336,7 +322,7 @@ def picking_L():
     group_l.set_max_velocity_scaling_factor(0.25)
     group_l.set_start_state_to_current_state()
 
-    cartesian(pick_compensated, group_l, constraint_list_L)
+    cartesian(pick_new, group_l, constraint_list_L)
 
     rospy.logdebug('CHECK MEASUREMENTS')
     # rospy.sleep(20)
@@ -344,9 +330,10 @@ def picking_L():
     # Closing the fingers
     gripper_effort(LEFT, 5)
     rospy.sleep(0.1)
-    print('STATO ATTUALE: {}'.format(group_l.get_current_pose().pose.position))
-    print('OBIETTIVO: {}'.format(pick_compensated.position))
-    rospy.sleep(5.0)
+
+    print('STATO ATTUALE: \n {}'.format(group_l.get_current_pose().pose.position))
+    print('OBIETTIVO: \n {}'.format(pick_new.position))
+
     # Return to pick up position
     cartesian(pick_up, group_l, constraint_list_L)
     # Return to rendezvous
@@ -361,10 +348,6 @@ def rendez_to_scan_L():
     rospy.loginfo('starting from the rendezvous picking position')
     # reorient for barcode Scanning
     rospy.logdebug('reorient for barcode scanning')
-    # reorient = group_l.get_current_joint_values()
-    # reorient[-1] += PI/4
-    # rospy.logdebug('reorienting for scanning')
-    # group_l.set_joint_value_target(reorient)
     reorient = group_l.get_current_pose()
     reorient.pose.orientation = copy.deepcopy(scan_L.orientation)
     reorient_plan = group_l.plan(reorient)
@@ -460,7 +443,7 @@ def scanning():
         # Initialize an initial joint condition -> change the 6 axis into 0
         group_l.set_start_state_to_current_state()
         init_joints = group_l.get_current_joint_values()
-        init_joints[-1] = 0.0
+        init_joints[-1] = 0
         group_l.go(init_joints, wait=True)
         group_l.stop()
         while not ok_received:
@@ -471,7 +454,7 @@ def scanning():
             init_joints = group_l.get_current_joint_values()
             # In order to don't be close to the axis limit (-229 deg to +229 deg)
             if init_joints[-1] < PI:
-                # Move of 15 deg
+                # Move of 30 deg
                 init_joints[-1] += PI/6  # I want to test if 30deg are enough -> reduce time
                 group_l.go(init_joints, wait=True)
                 group_l.stop()
@@ -484,8 +467,6 @@ def scanning():
 
 def placing_L():
     rospy.loginfo('going to rendezvous placing pose: \n {}'.format(rendezvous_placing_pose))
-    group_l.set_start_state_to_current_state()
-
     # Set the constraints for the placing:
     # Setting the Orientation constraint
     rospy.logdebug('Setting the orientation constraint')
@@ -503,9 +484,6 @@ def placing_L():
     constraint_list_L = Constraints()
     constraint_list_L.orientation_constraints = oc_L_list
 
-    # group_l.set_max_velocity_scaling_factor(1.0)
-    # group_l.set_max_acceleration_scaling_factor(1.0)
-
     rospy.logdebug('going to: rendezvous_placing_pose')
     group_l.set_pose_target(rendezvous_placing_pose)
     reorient = group_l.plan()
@@ -520,14 +498,13 @@ def placing_L():
     place_up = group_l.get_current_pose().pose
     place.position.z = output_rack_pose.pose.position.z + z_output_rack/2 + 0.050 + z_gripper
     group_l.set_max_velocity_scaling_factor(0.25)
-    group_l.set_start_state_to_current_state()
     rospy.logdebug('Going to place bottom')
     cartesian(place, group_l, constraint_list_L)
 
     # placing: opening gripper
-    gripper_effort(LEFT, -10)
+    gripper_effort(LEFT, -20)
     gripper_effort(LEFT, 0)
-
+    rospy.sleep(0.1)
     # go up
     rospy.logdebug('going up')
     cartesian(place_up, group_l, constraint_list_L)
@@ -545,12 +522,6 @@ def run():
     global group_both
     global scene
     global mpr
-
-    rospy.loginfo('Adding the table and racks objects')
-    scene.add_box("table", table_pose, size=(table_width, 1.2, table_height))
-    scene.add_box("output_rack", output_rack_pose, size=(x_output_rack, y_output_rack, z_output_rack))
-    scene.add_box("input_rack", input_rack_pose, size=(x_input_rack, y_input_rack, z_input_rack))
-    rospy.sleep(1.0)
 
     group_l.clear_path_constraints()
     group_r.clear_path_constraints()
@@ -573,6 +544,11 @@ def run():
 
 if __name__ == '__main__':
     try:
+        rospy.loginfo('Adding the table and racks objects')
+        scene.add_box("table", table_pose, size=(table_width, table_length, table_height))
+        scene.add_box("output_rack", output_rack_pose, size=(x_output_rack, y_output_rack, z_output_rack))
+        scene.add_box("input_rack", input_rack_pose, size=(x_input_rack, y_input_rack, z_input_rack))
+        rospy.sleep(1.0)
         for x in xrange(2):
             run()
         rospy.loginfo('finished')
