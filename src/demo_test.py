@@ -65,7 +65,7 @@ group_l.set_pose_reference_frame("yumi_body")
 # group_l.set_workspace(ws=ws_L)
 
 # Replanning
-group_l.allow_replanning(False)
+group_l.allow_replanning(True)
 # group_l.set_goal_tolerance(0.005)
 # group_l.set_num_planning_attempts(planning_attempts)
 # group_l.set_planning_time(planning_time)
@@ -81,7 +81,8 @@ group_r.set_workspace(ws=ws_R)
 
 # Replanning
 group_r.allow_replanning(True)
-group_r.set_goal_tolerance(0.005)
+group_r.set_goal_position_tolerance(0.001)
+# group_r.set_goal_tolerance(0.005)
 group_r.set_num_planning_attempts(planning_attempts)
 group_r.set_planning_time(planning_time)
 
@@ -357,6 +358,17 @@ def picking_L():
 
 def rendez_to_scan_L():
     group_l.set_start_state_to_current_state()
+    rospy.loginfo('starting from the rendezvous picking position')
+    # reorient for barcode Scanning
+    rospy.logdebug('reorient for barcode scanning')
+    # reorient = group_l.get_current_joint_values()
+    # reorient[-1] += PI/4
+    # rospy.logdebug('reorienting for scanning')
+    # group_l.set_joint_value_target(reorient)
+    reorient = group_l.get_current_pose()
+    reorient.pose.orientation = copy.deepcopy(scan_L.orientation)
+    reorient_plan = group_l.plan(reorient)
+    group_l.execute(reorient_plan, wait=True)
     # Keep the orientation constraint
     oc_home_L = OrientationConstraint()
     oc_home_L.link_name = "gripper_l_base"
@@ -371,26 +383,21 @@ def rendez_to_scan_L():
     # Declaring the object constraints
     constraint_list_L = Constraints()
     constraint_list_L.orientation_constraints = oc_L_list
-    rospy.loginfo('starting from the rendezvous picking position')
-    # reorient for barcode Scanning
-    rospy.logdebug('reorient for barcode scanning')
-    # reorient = group_l.get_current_joint_values()
-    # reorient[-1] += PI/4
-    # rospy.logdebug('reorienting for scanning')
-    # group_l.set_joint_value_target(reorient)
-    reorient = group_l.get_current_pose()
-    reorient.pose.orientation = copy.deepcopy(scan_L.orientation)
     group_l.set_path_constraints(constraint_list_L)
-    reorient_plan = group_l.plan(reorient)
-    group_l.execute(reorient_plan, wait=True)
+    
     # Go to Scan
-    group_l.set_start_state_to_current_state()
     group_l.set_pose_target(scan_L)
     plan_rendezvous_scanL = group_l.plan()
     group_l.execute(plan_rendezvous_scanL)
     group_l.stop()
     # cartesian(scan_L, group_l, constraint_list_L)
     group_l.clear_path_constraints()
+    # Reorienting before going to rendezvous placing pose
+    reorient = group_l.get_current_pose()
+    reorient.pose.orientation = copy.deepcopy(rendezvous_placing_pose.orientation)
+    reorient = group_l.plan()
+    group_l.execute(reorient, wait=True)
+    group_l.stop()
 
 
 def home_to_scan_R():
@@ -498,6 +505,7 @@ def placing_L():
 
     # group_l.set_max_velocity_scaling_factor(1.0)
     # group_l.set_max_acceleration_scaling_factor(1.0)
+
     rospy.logdebug('going to: rendezvous_placing_pose')
     group_l.set_pose_target(rendezvous_placing_pose)
     reorient = group_l.plan()
