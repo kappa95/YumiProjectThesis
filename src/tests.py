@@ -22,6 +22,7 @@ mpr = MotionPlanRequest()
 rospy.sleep(1.0)
 
 group_both = MoveGroupCommander("fede_both")
+group_both.set_pose_reference_frame("yumi_body")
 group_both.set_planning_time(5)
 group_both.allow_replanning(True)
 
