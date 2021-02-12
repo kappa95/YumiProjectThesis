@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="test_tube_urdf" params="prefix">
+    <link name="${prefix}tube_link">
+      <visual name="tube_visual">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <cylinder>
+            <radius>0.0180</radius>
+            <length>0.1030</length>
+          </cylinder>
+        </geometry>
+      </visual>
+      <collision name="tube_collision">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <cylinder>
+            <radius>0.0180</radius>
+            <length>0.1030</length>
+          </cylinder>
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.050"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <!--Inertia: I=1/12 mL^2 -->
+        <inertia ixx="0.000044204" iyy="0.000044204" izz="0"
+          ixy="0" ixz="0" iyz="0"/>
+      </inertial>
+    </link>
+  </xacro:macro>
+</robot>
