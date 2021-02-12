@@ -63,3 +63,8 @@ is below the 50sec.
 2. Understand why the planner sometimes doesn't find
 a solution... :thinking:
 3. Repeatibility (at least correct the constraint precision)
+
+#### To DO list:
+
+- [x] Created the xacro and urdf for Gazebo and rviz for the test tubes
+- [ ] Creating the urdf/xacro for the simulation --> Put test tubes and robot
