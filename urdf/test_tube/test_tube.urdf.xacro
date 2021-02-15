@@ -5,19 +5,13 @@
       <visual name="tube_visual">
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <cylinder>
-            <radius>0.0180</radius>
-            <length>0.1030</length>
-          </cylinder>
+          <cylinder radius="0.0180" length="0.1030"/>
         </geometry>
       </visual>
       <collision name="tube_collision">
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <cylinder>
-            <radius>0.0180</radius>
-            <length>0.1030</length>
-          </cylinder>
+          <cylinder radius="0.0180" length="0.1030"/>
         </geometry>
       </collision>
       <inertial>

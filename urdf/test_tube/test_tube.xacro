@@ -3,10 +3,10 @@
   <xacro:arg name="prefix" default="test_tube_1_"/>
 
   <!-- Includo URDF e argomento -->
-  <xacro:include filename="$(find YumiProjectThesis)/urdf/test_tube.urdf.xacro"/>
+  <xacro:include filename="$(find YumiProjectThesis)/urdf/test_tube/test_tube.urdf.xacro"/>
   <xacro:test_tube_urdf prefix="$(arg prefix)"/>
 
   <!-- Gazebo -->
-  <xacro:include filename="$(find YumiProjectThesis)/urdf/test_tube.gazebo.xacro"/>
+  <xacro:include filename="$(find YumiProjectThesis)/urdf/test_tube/test_tube.gazebo.xacro"/>
   <xacro:test_tube_gazebo prefix="$(arg prefix)"/>
 </robot>

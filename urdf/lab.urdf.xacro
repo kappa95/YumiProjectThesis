@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<robot name="lab" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+<!-- Arguments for the Yumi xacro file-->
+  <!--<xacro:property name="yumi_setup" default="fede_base"/> -->
+  <!--  Hardware interfaces for the joints and grippers -->
+  <!--<xacro:property name="arms_hardware_interface" default="VelocityJointInterface"/> -->
+  <!--<xacro:property name="grippers_hardware_interface" default="EffortJointInterface"/> -->
+  <!--<xacro:property name="yumi_initial_pos" default="-J yumi_joint_1_l -1.41
+                      -J yumi_joint_2_l -2.1
+                      -J yumi_joint_3_l 0.30
+                      -J yumi_joint_4_l 0.0
+                      -J yumi_joint_5_l 0.0
+                      -J yumi_joint_6_l 0.0
+                      -J yumi_joint_7_l 0.71
+                      -J yumi_joint_1_r 1.41
+                      -J yumi_joint_2_r -2.1
+                      -J yumi_joint_3_r 0.30
+                      -J yumi_joint_4_r 0.0
+                      -J yumi_joint_5_r 0.0
+                      -J yumi_joint_6_r 0.0
+                      -J yumi_joint_7_r -0.71"/>  -->
+
+  <!-- Include Yumi with table -->
+  <xacro:include filename="$(find yumi_description)/urdf/yumi.urdf.xacro"/>
+
+  <!-- Include test tubes -->
+  <xacro:include filename="$(find YumiProjectThesis)/urdf/test_tube/test_tube.urdf.xacro"/>
+  <xacro:test_tube_urdf prefix="test_tube_1_"/>
+  <!-- <xacro:test_tube prefix="test_tube_2_"/>
+  <xacro:test_tube prefix="test_tube_3_"/> -->
+
+  <!-- Joint TEST -->
+  <joint name="test_tube_1_joint" type="fixed">
+    <parent link="base"/>
+    <child link="test_tube_1_tube_link"/>
+    <origin xyz="0.3 0 ${0.5 + 0.1030/2}"/>
+  </joint>
+
+</robot>
