@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 
 from copy import deepcopy
+from typing import List
 from moveit_msgs.msg import *
 from moveit_commander import *
+from visualization_msgs.msg import MarkerArray, Marker
+import tf
 import yaml
 import os
-import geometry_msgs.msg
+from geometry_msgs.msg import *
 from yumi_utils import PI, gripper_effort, LEFT, RIGHT
 from yumi_hw.srv import *
 
@@ -50,27 +53,37 @@ test_tube_pose.pose.position.y = 0.0
 test_tube_pose.pose.position.z = (tube_length + base_height)/2
 
 
+# Place positions are subscribed by the placepos topic
+class PlaceSub:
+    def __init__(self):
+        self.placeMarkers = []  # type: List[Pose]
+        self.msg = rospy.wait_for_message("/placepos", topic_type=MarkerArray)  # type: MarkerArray
+        self.placeMarkers = [i for i in self.msg.markers]  # type: List[Marker]
+
+
 def run():
-    rospy.logdebug(robot.get_group_names())
+    # Take Place positions
+    placeSub = PlaceSub()
     gripper_effort(LEFT, -20)
     gripper_effort(RIGHT, -20)
     # Remove detached object
-    scene.remove_attached_object(left_arm, "test_tube")
+    if scene.get_attached_objects():
+        scene.remove_attached_object(left_arm, "test_tube")
     # Remove all the objects
     scene.remove_world_object("test_tube")
     rospy.sleep(1.0)
     # Add the test tube
     scene.add_box("test_tube", test_tube_pose, size=(tube_radius, tube_radius, tube_length))
     rospy.sleep(2.0)
+
     rospy.loginfo('home')
     group_both.set_pose_target(home_L, left_arm)
     group_both.set_pose_target(home_R, right_arm)
     plan = group_both.plan()
     group_both.execute(plan)
     group_both.stop()
-    home_state = robot.get_current_state()
-    rospy.loginfo('current pose: \n L: {} \n R: {}'.format(
-        group_both.get_current_pose(left_arm), group_both.get_current_pose(right_arm)))
+    # rospy.loginfo('current pose: \n L: {} \n R: {}'.format(
+    #     group_both.get_current_pose(left_arm), group_both.get_current_pose(right_arm)))
     # Target Poses
     pose_L = deepcopy(test_tube_pose)
     pose_L.pose.position.z += tube_length/2 + 0.12
@@ -85,6 +98,31 @@ def run():
     plan = group_both.plan()
     group_both.execute(plan)
     group_both.stop()
+
+    # placePos = [i.pose for i in placeSub.placeMarkers]  # type: List[Pose]
+    placePS = []
+    for i in placeSub.placeMarkers:
+        temp = PoseStamped()
+        temp.header.frame_id = i.header.frame_id
+        temp.pose = i.pose
+        temp.pose.orientation = group_both.get_current_pose(left_arm).pose.orientation
+        temp.pose.position.z += tube_length/2 + 0.136 + 0.05
+        placePS.append(temp)
+
+    group_both.set_pose_target(placePS[0], left_arm)
+    placePlan = group_both.plan()
+    group_both.execute(placePlan)
+    group_both.stop()
+    # Detach test tube
+    scene.remove_attached_object(left_arm, "test_tube")
+    gripper_effort(LEFT, -20)
+    # The actual pose is read in the planning reference frame --> world one
+    rospy.logdebug('Actual Pose:\n{}'.format(group_both.get_current_pose(left_arm).pose))
+    tfl = tf.TransformListener()
+    tfl.waitForTransform("base", "world", rospy.Time(0), rospy.Duration(5))
+    pose_transformed = tfl.transformPose("world", placePS[0])
+    rospy.logdebug('Commanded Pose:\n{}'.format(pose_transformed))
+    rospy.logdebug(group_both.get_pose_reference_frame())
 
 
 if __name__ == '__main__':
