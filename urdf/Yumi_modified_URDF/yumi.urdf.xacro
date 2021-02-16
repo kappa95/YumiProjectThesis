@@ -1,0 +1,88 @@
+<?xml version="1.0"?>
+<robot name="yumi" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- Import Rviz colors -->
+  <xacro:include filename="$(find yumi_description)/urdf/Util/materials.xacro" />
+  <!-- Import utilities -->
+  <xacro:include filename="$(find yumi_description)/urdf/Util/utilities.xacro" />
+  <!--Import the yumi macro -->
+  <xacro:include filename="$(find yumi_description)/urdf/yumi.xacro"/>
+  <!--Import the yumi servo gripper macro -->
+  <xacro:include filename="$(find yumi_description)/urdf/Grippers/yumi_servo_gripper.xacro"/>
+  <!-- Import Gazebo plugins -->
+  <xacro:include filename="$(find yumi_description)/urdf/Gazebo/gazebo.urdf.xacro"/>
+
+
+  <!--yumi-->
+  <xacro:yumi name="yumi" hardware_interface="hardware_interface/$(arg arms_interface)" parent="${yumi_parent}" >
+    <origin xyz="0 0 0.1" rpy="0 0 0" />
+  </xacro:yumi>
+
+  <!--right gripper-->
+  <xacro:yumi_servo_gripper name="gripper_r" hardware_interface="hardware_interface/$(arg grippers_interface)" parent="yumi_link_7_r">
+    <origin xyz="0 0 0.007" rpy="0 0 ${PI}" />
+  </xacro:yumi_servo_gripper>
+
+  <!--left gripper-->
+  <xacro:yumi_servo_gripper name="gripper_l" hardware_interface="hardware_interface/$(arg grippers_interface)" parent="yumi_link_7_l">
+    <origin xyz="0 0 0.007" rpy="0 0 ${PI}" />
+  </xacro:yumi_servo_gripper>
+
+
+
+  <xacro:property name="yumi_setup" value="$(arg yumi_setup)" />
+
+  <xacro:if value="${yumi_setup == 'robot_centric'}">
+  	<!-- Pure YuMi URDF, with no joints connecting it to any other robot or pedestal. Neither accessories. -->
+  </xacro:if>
+
+
+
+  <xacro:if value="${yumi_setup == 'default'}">
+    <xacro:property name="yumi_parent" value="world" />
+    <link name="world"/>
+    <joint name="world_joint" type="fixed">
+      <parent link="world"/>
+      <child link="yumi_base_link"/>
+      <origin xyz="0 0 0.1" rpy="0 0 0" />
+    </joint>
+  </xacro:if>
+
+  <xacro:property name="base_width" value="1.1"/>
+  <xacro:property name="base_length" value="2.2"/>
+  <xacro:property name="base_height" value="1.0"/>
+
+  <material name="grey">
+    <color rgba="0.75 0.75 0.75 1"/>
+  </material>
+
+  <link name="base">
+    <visual>
+      <geometry>
+        <box size="${base_width} ${base_length} ${base_height}" />
+      </geometry>
+      <material name="grey"/>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="${base_width} ${base_length} ${base_height}" />
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="world"/>
+
+  <joint name="base_world_joint" type="fixed">
+    <parent link="world"/>
+    <child link="base"/>
+    <origin xyz="0 0 ${base_height/2}" rpy="0 0 0"/>
+  </joint>
+
+  <xacro:if value="${yumi_setup == 'fede_base'}">
+    <joint name="robot_base_joint" type="fixed">
+      <parent link="base"/>
+      <child link="yumi_base_link"/>
+      <origin xyz="-${base_width/2} 0 ${base_height/2}" rpy="0 0 0"/>
+    </joint>
+  </xacro:if>
+
+</robot>
