@@ -20,13 +20,27 @@ to the output rack hole positions?
 
 #### Steps:
 
-- [ ] Find a way to command the 2 arms together <-- To recheck - Find a new way
 - [x] Defining the constraints in which we plan the trajectory and choose the planner
-that guarantees an unique solution for the position --> list of planner
+that guarantees a unique solution for the position --> list of planner
 - [ ] Defining the hypothesis under which the arm should decide a particular trajectory instead of another → change of the speed if the constraints are hard that decide an unique trajectory
-- [ ] In the case we don’t want to fix an unique trajectory, find the constraints
+- [ ] In the case we don’t want to fix a unique trajectory, find the constraints
  and planner for having “reasonable” and not strange trajectories
 - [ ] Write the algorithm for choosing the solutions
+
+#### To DO list:
+
+- [x] Created the xacro and urdf for Gazebo and rviz for the test tubes
+- [ ] Creating the urdf/xacro for the simulation --> Put test tubes and robot --> Used Planning scene objects
+- [ ] Defining target positions
+- [ ] Defining the tasks functions 
+- [ ] Evaluate the EST for the single motion for every motion
+
+
+## Setup followed
+https://github.com/kth-ros-pkg/yumi/wiki/Installation
+
+
+##Old stuff to ignore
 
 ### Project Demo part
 
@@ -36,9 +50,9 @@ An initial demo with fixed input/output racks --> working with points and constr
  
 - [x] Find a way to use the Yumi's Camera
 - [x] Find a way to decode the image for Barcode Scanning
-- [x] Created a Program for publish barcode on a topic
+- [x] Created a Program for publishing barcode on a topic
 - [x] Created a Program for managing the barcodes (Barcode Manager) --> Tested
-- [ ] To test the Feedback between the BarcodeManager and the motion
+- [ ] To test the Feedback between the BarcodeManager, and the motion
 
 #### Motion Side:
 - [x] Picking Motion
@@ -54,17 +68,5 @@ An initial demo with fixed input/output racks --> working with points and constr
 * ESTStar --> Fast close to EST :relieved:
 * PRM* --> Slowest between these :relaxed:
 
-:relaxed: With this motions the time for each test tube (without considering the scanning)
+:relaxed: With these motions the time for each test tube (without considering the scanning)
 is below the 50sec.
-
-#### Things to Fix for the motion:
-
-1. Points of picking and placing
-2. Understand why the planner sometimes doesn't find
-a solution... :thinking:
-3. Repeatibility (at least correct the constraint precision)
-
-#### To DO list:
-
-- [x] Created the xacro and urdf for Gazebo and rviz for the test tubes
-- [ ] Creating the urdf/xacro for the simulation --> Put test tubes and robot
