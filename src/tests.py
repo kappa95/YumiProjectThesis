@@ -53,6 +53,50 @@ test_tube_pose.pose.position.y = 0.0
 test_tube_pose.pose.position.z = (tube_length + base_height)/2
 
 
+class TestTube(name=None, x=0.0, y=0.0):
+    # type: (str, float, float)
+    """
+    Defines the object test tube
+    """
+    count = 1  # Counter of the instances for naming the object
+
+    def __init__(self, name, x, y):
+        self.length = 0.1030
+        self.radius = 0.0180
+        self.height = 1.0
+        self.pose_msg = PoseStamped()
+        self.pose_msg.header.frame_id = "base"
+        self.pose_msg.pose.position.x = x
+        self.pose_msg.pose.position.y = y
+        self.pose_msg.pose.position.z = (tube_length + base_height) / 2
+        TestTube.count += 1
+        if name is not None:
+            self.name = "test_tube_" + str(name)
+        else:
+            self.name = "test_tube_" + str(TestTube.count)
+
+    def add_object(self):
+        scene.add_box(self.name, self.pose_msg, size=(self.radius, self.radius, self.length))
+
+    def remove_object(self):
+        if scene.get_attached_objects(self.name):
+            rospy.logerr('Object attached: check it please!')
+        else:
+            scene.remove_world_object(self.name)
+
+    def attach_object(self, arm):
+        # type: (TestTube, str) -> None
+        if arm is left_arm:
+            touch_links = robot.get_link_names(group_left_gripper)
+        else:
+            touch_links = robot.get_link_names(group_right_gripper)
+        scene.attach_box(arm, self.name, touch_links=touch_links)
+
+    def detach_object(self, arm):
+        # type: (TestTube, str) -> None
+        scene.remove_attached_object(arm, self.name)
+
+
 # Place positions are subscribed by the placepos topic
 class PlaceSub:
     def __init__(self):
@@ -106,7 +150,7 @@ def run():
         temp.header.frame_id = i.header.frame_id
         temp.pose = i.pose
         temp.pose.orientation = group_both.get_current_pose(left_arm).pose.orientation
-        temp.pose.position.z += tube_length/2 + 0.136 + 0.05
+        temp.pose.position.z += tube_length/2 + 0.136 + 0.01 + 0.03002
         placePS.append(temp)
 
     group_both.set_pose_target(placePS[0], left_arm)
