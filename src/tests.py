@@ -33,6 +33,9 @@ left_arm = "yumi_link_7_l"
 group_left_gripper = 'left_gripper'
 group_right_gripper = 'right_gripper'
 
+# Useful Variables
+Z = 2
+
 # Publish the trajectory on Rviz
 rospy.Publisher('/move_group/display_planned_path', moveit_msgs.msg.DisplayTrajectory, queue_size=20)
 rospy.sleep(1.0)
@@ -53,14 +56,14 @@ test_tube_pose.pose.position.y = 0.0
 test_tube_pose.pose.position.z = (tube_length + base_height)/2
 
 
-class TestTube(name=None, x=0.0, y=0.0):
-    # type: (str, float, float)
+class TestTube:
     """
     Defines the object test tube
     """
     count = 1  # Counter of the instances for naming the object
 
-    def __init__(self, name, x, y):
+    def __init__(self, name=None, x=0.0, y=0.0):
+        # type: (str, float, float) -> None
         self.length = 0.1030
         self.radius = 0.0180
         self.height = 1.0
@@ -91,10 +94,12 @@ class TestTube(name=None, x=0.0, y=0.0):
         else:
             touch_links = robot.get_link_names(group_right_gripper)
         scene.attach_box(arm, self.name, touch_links=touch_links)
+        rospy.sleep(1.0)
 
     def detach_object(self, arm):
         # type: (TestTube, str) -> None
         scene.remove_attached_object(arm, self.name)
+        rospy.sleep(0.5)
 
 
 # Place positions are subscribed by the placepos topic
@@ -112,12 +117,16 @@ def run():
     gripper_effort(RIGHT, -20)
     # Remove detached object
     if scene.get_attached_objects():
-        scene.remove_attached_object(left_arm, "test_tube")
+        scene.remove_attached_object(left_arm)
     # Remove all the objects
     scene.remove_world_object("test_tube")
     rospy.sleep(1.0)
     # Add the test tube
-    scene.add_box("test_tube", test_tube_pose, size=(tube_radius, tube_radius, tube_length))
+    T1 = TestTube()
+    T1.add_object()
+    T2 = TestTube(y=0.03)
+    T2.add_object()
+    # scene.add_box("test_tube", test_tube_pose, size=(tube_radius, tube_radius, tube_length))
     rospy.sleep(2.0)
 
     rospy.loginfo('home')
@@ -126,17 +135,18 @@ def run():
     plan = group_both.plan()
     group_both.execute(plan)
     group_both.stop()
-    # rospy.loginfo('current pose: \n L: {} \n R: {}'.format(
-    #     group_both.get_current_pose(left_arm), group_both.get_current_pose(right_arm)))
-    # Target Poses
-    pose_L = deepcopy(test_tube_pose)
+
+    # pose_L = deepcopy(test_tube_pose)
+    rospy.logdebug('POSA da CLASSE: \n{}\n FINE'.format(T1.pose_msg))
+    pose_L = deepcopy(T1.pose_msg)
     pose_L.pose.position.z += tube_length/2 + 0.12
     pose_L.pose.orientation = group_both.get_current_pose(left_arm).pose.orientation
     group_both.set_pose_target(pose_L, left_arm)
     pick = group_both.plan()
     group_both.execute(pick)
-    touch_links = robot.get_link_names(group_left_gripper)
-    scene.attach_box(left_arm, "test_tube", touch_links=touch_links)
+    # touch_links = robot.get_link_names(group_left_gripper)
+    T1.attach_object(left_arm)
+    # scene.attach_box(left_arm, "test_tube", touch_links=touch_links)
     gripper_effort(LEFT, 10)
     group_both.set_pose_target(home_L, left_arm)
     plan = group_both.plan()
@@ -158,8 +168,9 @@ def run():
     group_both.execute(placePlan)
     group_both.stop()
     # Detach test tube
-    scene.remove_attached_object(left_arm, "test_tube")
-    gripper_effort(LEFT, -20)
+    # scene.remove_attached_object(left_arm, "test_tube")
+    T1.detach_object(left_arm)
+
     # The actual pose is read in the planning reference frame --> world one
     rospy.logdebug('Actual Pose:\n{}'.format(group_both.get_current_pose(left_arm).pose))
     tfl = tf.TransformListener()
@@ -167,6 +178,37 @@ def run():
     pose_transformed = tfl.transformPose("world", placePS[0])
     rospy.logdebug('Commanded Pose:\n{}'.format(pose_transformed))
     rospy.logdebug(group_both.get_pose_reference_frame())
+
+    # RETURN TO HOME
+    group_both.set_pose_target(home_L, left_arm)
+    plan = group_both.plan()
+    group_both.execute(plan)
+    group_both.stop()
+    # Open Fingers
+    gripper_effort(LEFT, -20)
+
+    # Picking
+    pose_L = deepcopy(T2.pose_msg)
+    pose_L.pose.position.z += tube_length/2 + 0.12
+    pose_L.pose.orientation = group_both.get_current_pose(left_arm).pose.orientation
+    group_both.set_pose_target(pose_L, left_arm)
+    pick = group_both.plan()
+    group_both.execute(pick)
+    T2.attach_object(left_arm)
+    gripper_effort(LEFT, 10)
+    # Homing
+    group_both.set_pose_target(home_L, left_arm)
+    plan = group_both.plan()
+    group_both.execute(plan)
+    group_both.stop()
+    # Placing
+    group_both.set_pose_target(placePS[1], left_arm)
+    placePlan = group_both.plan()
+    group_both.execute(placePlan)
+    group_both.stop()
+    T2.detach_object(left_arm)
+    group_both.set_pose_target(home_L, left_arm)
+    group_both.go(wait=True)
 
 
 if __name__ == '__main__':
