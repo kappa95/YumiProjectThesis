@@ -16,6 +16,8 @@ from yumi_hw.srv import *
 # Initialization of Moveit
 rospy.loginfo('Starting the Initialization')
 roscpp_initialize(sys.argv)
+# Initialization of the Node
+rospy.init_node('test', anonymous=True, log_level=rospy.DEBUG)
 
 robot = RobotCommander()
 scene = PlanningSceneInterface()
@@ -37,8 +39,8 @@ group_right_gripper = 'right_gripper'
 Z = 2
 
 # Publish the trajectory on Rviz
-rospy.Publisher('/move_group/display_planned_path', moveit_msgs.msg.DisplayTrajectory, queue_size=20)
-rospy.sleep(1.0)
+# rospy.Publisher('/move_group/display_planned_path', moveit_msgs.msg.DisplayTrajectory, queue_size=20)
+# rospy.sleep(1.0)
 
 
 # Home position
@@ -80,6 +82,7 @@ class TestTube:
 
     def add_object(self):
         scene.add_box(self.name, self.pose_msg, size=(self.radius, self.radius, self.length))
+        rospy.sleep(0.5)
 
     def remove_object(self):
         if scene.get_attached_objects(self.name):
@@ -107,7 +110,7 @@ class PlaceSub:
     def __init__(self):
         self.placeMarkers = []  # type: List[Pose]
         self.msg = rospy.wait_for_message("/placepos", topic_type=MarkerArray)  # type: MarkerArray
-        self.placeMarkers = [i for i in self.msg.markers]  # type: List[Marker]
+        self.placeMarkers = [j for j in self.msg.markers]  # type: List[Marker]
 
 
 def evaluate_time(plan):
@@ -119,7 +122,7 @@ def evaluate_time(plan):
     :return: duration time of the trajectory
     """
     # Check if the plan is not empty
-    if plan:
+    if plan.joint_trajectory.points:
         plan_dict = message_converter.convert_ros_message_to_dictionary(plan)  # type: dict
         duration_time = plan_dict['joint_trajectory']['points'][-1]['time_from_start']  # type: dict
         duration = int(duration_time['secs']) + int(duration_time['nsecs'])*10**(-9)  # type: float
@@ -131,66 +134,101 @@ def evaluate_time(plan):
         return duration
 
 
+def home():
+    rospy.loginfo('home')
+    group_both.set_pose_target(home_L, left_arm)
+    group_both.set_pose_target(home_R, right_arm)
+    plan = group_both.plan()
+    home_duration = evaluate_time(plan)
+    group_both.execute(plan)
+    group_both.stop()
+    return home_duration
+
+
+def picking(obj, arm):
+    # type: (TestTube, str) -> float
+    """
+    Wrapper for picking
+
+    :param obj: Object to pick
+    :param arm: Arm used
+    :return: Duration time for picking
+    """
+    pose_P = deepcopy(obj.pose_msg)
+    pose_P.pose.position.z += tube_length/2 + 0.12
+    pose_P.pose.orientation = group_both.get_current_pose(arm).pose.orientation
+
+    if arm is left_arm:
+        home_pose = home_L
+        grip = LEFT
+    else:
+        home_pose = home_R
+        grip = RIGHT
+    group_both.set_pose_target(pose_P, arm)
+    pick = group_both.plan()
+    # Evaluate the time for picking
+    t1 = evaluate_time(pick)
+    # Picking
+    group_both.execute(pick)
+    group_both.stop()
+
+    # Attach Test tube
+    obj.attach_object(arm)
+
+    gripper_effort(grip, 10)
+    group_both.set_pose_target(home_pose, arm)
+    plan = group_both.plan()
+    # Evaluate the duration of the planning
+    t2 = evaluate_time(plan)
+    # Execute the trajectory
+    group_both.execute(plan)
+    group_both.stop()
+    return t1 + t2
+
+
+# Take Place positions
+placeSub = PlaceSub()
+# Place positions
+# TODO: Check that probably here there are the positions of the buffers.
+placePS = []
+for i in placeSub.placeMarkers:
+    temp = PoseStamped()
+    temp.header.frame_id = i.header.frame_id
+    temp.pose = i.pose
+    temp.pose.orientation = group_both.get_current_pose(left_arm).pose.orientation
+    temp.pose.position.z += tube_length / 2 + 0.136 + 0.01 + 0.03002
+    placePS.append(temp)
+
+
 def run():
-    # Take Place positions
-    placeSub = PlaceSub()
     # Open grippers
     gripper_effort(LEFT, -20)
     gripper_effort(RIGHT, -20)
     # Remove detached object
     if scene.get_attached_objects():
         scene.remove_attached_object(left_arm)
+        scene.remove_attached_object(right_arm)
     # Remove all the objects
-    scene.remove_world_object()
+    scene.remove_world_object("test_tubes")
     rospy.sleep(1.0)
 
     # Add the test tube
     T1 = TestTube()
-    T1.add_object()
     T2 = TestTube(y=0.03)
+
+    rospy.loginfo('Placing tubes')
+    # Setting up the test tubes
+    T1.add_object()
     T2.add_object()
     rospy.sleep(2.0)
 
-    rospy.loginfo('home')
-    group_both.set_pose_target(home_L, left_arm)
-    group_both.set_pose_target(home_R, right_arm)
-    plan = group_both.plan()
-    group_both.execute(plan)
-    group_both.stop()
+    # Going home
+    home()
 
-    pose_L = deepcopy(T1.pose_msg)
-    pose_L.pose.position.z += tube_length/2 + 0.12
-    pose_L.pose.orientation = group_both.get_current_pose(left_arm).pose.orientation
+    # picking
+    picking(T1, left_arm)
 
-    group_both.set_pose_target(pose_L, left_arm)
-    pick = group_both.plan()
-    # Evaluate the time for picking
-    evaluate_time(pick)
-    # Picking
-    group_both.execute(pick)
-    group_both.stop()
-
-    # Attach Test tube
-    T1.attach_object(left_arm)
-
-    gripper_effort(LEFT, 10)
-    group_both.set_pose_target(home_L, left_arm)
-    plan = group_both.plan()
-    # Evaluate the duration of the planning
-    evaluate_time(plan)
-    # Execute the trajectory
-    group_both.execute(plan)
-    group_both.stop()
-
-    placePS = []
-    for i in placeSub.placeMarkers:
-        temp = PoseStamped()
-        temp.header.frame_id = i.header.frame_id
-        temp.pose = i.pose
-        temp.pose.orientation = group_both.get_current_pose(left_arm).pose.orientation
-        temp.pose.position.z += tube_length/2 + 0.136 + 0.01 + 0.03002
-        placePS.append(temp)
-
+    # Placing
     group_both.set_pose_target(placePS[0], left_arm)
     placePlan = group_both.plan()
     # Evaluate the time of the trajectory
@@ -259,7 +297,5 @@ def run():
 
 
 if __name__ == '__main__':
-    # Initialization of the Node
-    rospy.init_node('test', anonymous=True, log_level=rospy.DEBUG)
     run()
     roscpp_shutdown()
