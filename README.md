@@ -30,8 +30,8 @@ that guarantees a unique solution for the position --> list of planner
 #### To DO list:
 
 - [x] Created the xacro and urdf for Gazebo and rviz for the test tubes
-- [ ] Creating the urdf/xacro for the simulation --> Put test tubes and robot --> Used Planning scene objects
-- [ ] Defining target positions
+- [x] Creating the urdf/xacro for the simulation --> Put test tubes and robot --> Used Planning scene objects
+- [x] Defining target positions
 - [ ] Defining the tasks functions 
 - [ ] Evaluate the EST for the single motion for every motion
 
@@ -40,7 +40,7 @@ that guarantees a unique solution for the position --> list of planner
 https://github.com/kth-ros-pkg/yumi/wiki/Installation
 
 
-##Old stuff to ignore
+## Old stuff to ignore
 
 ### Project Demo part
 
