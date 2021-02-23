@@ -141,7 +141,7 @@ def run():
     if scene.get_attached_objects():
         scene.remove_attached_object(left_arm)
     # Remove all the objects
-    scene.remove_world_object("test_tube")
+    scene.remove_world_object()
     rospy.sleep(1.0)
 
     # Add the test tube
