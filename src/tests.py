@@ -61,7 +61,7 @@ class TestTube:
     """
     Defines the object test tube
     """
-    count = 1  # Counter of the instances for naming the object
+    count = 0  # Counter of the instances for naming the object
 
     def __init__(self, name=None, x=0.0, y=0.0):
         # type: (str, float, float) -> None
@@ -73,11 +73,12 @@ class TestTube:
         self.pose_msg.pose.position.x = x
         self.pose_msg.pose.position.y = y
         self.pose_msg.pose.position.z = (tube_length + base_height) / 2
+        self.id = TestTube.count
         TestTube.count += 1
         if name is not None:
             self.name = "test_tube_" + str(name)
         else:
-            self.name = "test_tube_" + str(TestTube.count)
+            self.name = "test_tube_" + str(TestTube.count + 1)
 
     def add_object(self):
         scene.add_box(self.name, self.pose_msg, size=(self.radius, self.radius, self.length))
@@ -201,6 +202,24 @@ for i in placeSub.placeMarkers:
     placePS.append(temp)
 
 
+def placing(obj):
+    # type: (TestTube) -> float
+    idx = obj.id  # Index of the test tube from the class
+    group_both.set_pose_target(placePS[idx], left_arm)
+    placePlan = group_both.plan()
+    # Evaluate the time of the trajectory
+    t1 = evaluate_time(placePlan)
+    group_both.execute(placePlan)
+    group_both.stop()
+    obj.detach_object(left_arm)
+    gripper_effort(LEFT, -20)
+    group_both.set_pose_target(home_L, left_arm)
+    plan = group_both.plan()
+    t2 = evaluate_time(plan)
+    group_both.execute(plan)
+    return t1 + t2
+
+
 def run():
     # Open grippers
     gripper_effort(LEFT, -20)
@@ -215,7 +234,9 @@ def run():
 
     # Add the test tube
     T1 = TestTube()
+    rospy.loginfo('ID del tube1: {}'.format(T1.id))
     T2 = TestTube(y=0.03)
+    rospy.loginfo('ID del tube2: {}'.format(T2.id))
 
     rospy.loginfo('Placing tubes')
     # Setting up the test tubes
@@ -230,22 +251,16 @@ def run():
     picking(T1, left_arm)
 
     # Placing
-    group_both.set_pose_target(placePS[0], left_arm)
-    placePlan = group_both.plan()
-    # Evaluate the time of the trajectory
-    evaluate_time(placePlan)
-    group_both.execute(placePlan)
-    group_both.stop()
-    # Detach test tube
-    T1.detach_object(left_arm)
+    placing(T1)
 
-    # The actual pose is read in the planning reference frame --> world one
-    rospy.logdebug('Actual Pose:\n{}'.format(group_both.get_current_pose(left_arm).pose))
-    tfl = tf.TransformListener()
-    tfl.waitForTransform("base", "world", rospy.Time(0), rospy.Duration(5))
-    pose_transformed = tfl.transformPose("world", placePS[0])
-    rospy.logdebug('Commanded Pose:\n{}'.format(pose_transformed))
-    rospy.logdebug(group_both.get_pose_reference_frame())
+    # Useful listener for having the pose of the object
+    # # The actual pose is read in the planning reference frame --> world one
+    # rospy.logdebug('Actual Pose:\n{}'.format(group_both.get_current_pose(left_arm).pose))
+    # tfl = tf.TransformListener()
+    # tfl.waitForTransform("base", "world", rospy.Time(0), rospy.Duration(5))
+    # pose_transformed = tfl.transformPose("world", placePS[0])
+    # rospy.logdebug('Commanded Pose:\n{}'.format(pose_transformed))
+    # rospy.logdebug(group_both.get_pose_reference_frame())
 
     # RETURN TO HOME
     home()
@@ -254,15 +269,7 @@ def run():
     picking(T2, left_arm)
 
     # Placing
-    group_both.set_pose_target(placePS[1], left_arm)
-    placePlan = group_both.plan()
-    # Evaluate the time of the trajectory
-    evaluate_time(placePlan)
-    group_both.execute(placePlan)
-    group_both.stop()
-    T2.detach_object(left_arm)
-    group_both.set_pose_target(home_L, left_arm)
-    group_both.go(wait=True)
+    placing(T2)
 
 
 if __name__ == '__main__':
