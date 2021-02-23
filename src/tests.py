@@ -5,6 +5,7 @@ from typing import List
 from moveit_msgs.msg import *
 from moveit_commander import *
 from visualization_msgs.msg import MarkerArray, Marker
+from rospy_message_converter import message_converter
 import tf
 import yaml
 import os
@@ -110,9 +111,31 @@ class PlaceSub:
         self.placeMarkers = [i for i in self.msg.markers]  # type: List[Marker]
 
 
+def evaluate_time(plan):
+    """
+    It returns the time duration of the trajectory
+
+    :param plan: Plan msg of the trajectory
+    :type plan: RobotTrajectory
+    :return: duration time of the trajectory
+    """
+    # Check if the plan is not empty
+    if plan:
+        plan_dict = message_converter.convert_ros_message_to_dictionary(plan)  # type: dict
+        duration_time = plan_dict['joint_trajectory']['points'][-1]['time_from_start']  # type: dict
+        duration = int(duration_time['secs']) + int(duration_time['nsecs'])*10**(-9)  # type: float
+        rospy.loginfo('Estimated time of planning: {} s'.format(duration))
+        return duration
+    else:
+        rospy.logwarn('The plan is empty')
+        duration = 0.0
+        return duration
+
+
 def run():
     # Take Place positions
     placeSub = PlaceSub()
+    # Open grippers
     gripper_effort(LEFT, -20)
     gripper_effort(RIGHT, -20)
     # Remove detached object
@@ -121,6 +144,7 @@ def run():
     # Remove all the objects
     scene.remove_world_object("test_tube")
     rospy.sleep(1.0)
+
     # Add the test tube
     T1 = TestTube()
     T1.add_object()
@@ -150,10 +174,12 @@ def run():
     gripper_effort(LEFT, 10)
     group_both.set_pose_target(home_L, left_arm)
     plan = group_both.plan()
+    # Evaluate the duration of the planning
+    evaluate_time(plan)
+    # Execute the trajectory
     group_both.execute(plan)
     group_both.stop()
 
-    # placePos = [i.pose for i in placeSub.placeMarkers]  # type: List[Pose]
     placePS = []
     for i in placeSub.placeMarkers:
         temp = PoseStamped()
@@ -165,6 +191,8 @@ def run():
 
     group_both.set_pose_target(placePS[0], left_arm)
     placePlan = group_both.plan()
+    # Evaluate the time of the trajectory
+    evaluate_time(placePlan)
     group_both.execute(placePlan)
     group_both.stop()
     # Detach test tube
@@ -182,6 +210,8 @@ def run():
     # RETURN TO HOME
     group_both.set_pose_target(home_L, left_arm)
     plan = group_both.plan()
+    # Evaluate the time of the trajectory
+    evaluate_time(plan)
     group_both.execute(plan)
     group_both.stop()
     # Open Fingers
@@ -191,19 +221,35 @@ def run():
     pose_L = deepcopy(T2.pose_msg)
     pose_L.pose.position.z += tube_length/2 + 0.12
     pose_L.pose.orientation = group_both.get_current_pose(left_arm).pose.orientation
+
     group_both.set_pose_target(pose_L, left_arm)
     pick = group_both.plan()
+
+    # Evaluate the time of the trajectory
+    evaluate_time(pick)
+    # Execute trajectory
     group_both.execute(pick)
+    group_both.stop()
+
+    # Attach test tube
     T2.attach_object(left_arm)
     gripper_effort(LEFT, 10)
+
     # Homing
     group_both.set_pose_target(home_L, left_arm)
     plan = group_both.plan()
+
+    # Evaluate the time of the trajectory
+    evaluate_time(plan)
+    # Execute trajectory
     group_both.execute(plan)
     group_both.stop()
+
     # Placing
     group_both.set_pose_target(placePS[1], left_arm)
     placePlan = group_both.plan()
+    # Evaluate the time of the trajectory
+    evaluate_time(placePlan)
     group_both.execute(placePlan)
     group_both.stop()
     T2.detach_object(left_arm)
