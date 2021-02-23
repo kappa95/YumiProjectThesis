@@ -53,6 +53,7 @@ marker_publisher = rospy.Publisher("/placepos", MarkerArray, queue_size=20)
 
 if __name__ == '__main__':
     rospy.init_node('placeposMarkers', anonymous=True)
+    rospy.loginfo('Place and Buffer Markers are setting up')
     # rate = rospy.Rate(10)
     while not rospy.is_shutdown():
         marker_publisher.publish(placeArray)
