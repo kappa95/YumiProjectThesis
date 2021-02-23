@@ -8,7 +8,6 @@ from visualization_msgs.msg import MarkerArray, Marker
 from rospy_message_converter import message_converter
 import tf
 import yaml
-import os
 from geometry_msgs.msg import *
 from yumi_utils import PI, gripper_effort, LEFT, RIGHT
 from yumi_hw.srv import *
@@ -150,7 +149,6 @@ def run():
     T1.add_object()
     T2 = TestTube(y=0.03)
     T2.add_object()
-    # scene.add_box("test_tube", test_tube_pose, size=(tube_radius, tube_radius, tube_length))
     rospy.sleep(2.0)
 
     rospy.loginfo('home')
@@ -160,17 +158,21 @@ def run():
     group_both.execute(plan)
     group_both.stop()
 
-    # pose_L = deepcopy(test_tube_pose)
-    rospy.logdebug('POSA da CLASSE: \n{}\n FINE'.format(T1.pose_msg))
     pose_L = deepcopy(T1.pose_msg)
     pose_L.pose.position.z += tube_length/2 + 0.12
     pose_L.pose.orientation = group_both.get_current_pose(left_arm).pose.orientation
+
     group_both.set_pose_target(pose_L, left_arm)
     pick = group_both.plan()
+    # Evaluate the time for picking
+    evaluate_time(pick)
+    # Picking
     group_both.execute(pick)
-    # touch_links = robot.get_link_names(group_left_gripper)
+    group_both.stop()
+
+    # Attach Test tube
     T1.attach_object(left_arm)
-    # scene.attach_box(left_arm, "test_tube", touch_links=touch_links)
+
     gripper_effort(LEFT, 10)
     group_both.set_pose_target(home_L, left_arm)
     plan = group_both.plan()
@@ -196,7 +198,6 @@ def run():
     group_both.execute(placePlan)
     group_both.stop()
     # Detach test tube
-    # scene.remove_attached_object(left_arm, "test_tube")
     T1.detach_object(left_arm)
 
     # The actual pose is read in the planning reference frame --> world one
