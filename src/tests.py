@@ -26,7 +26,8 @@ rospy.sleep(1.0)
 
 group_both = MoveGroupCommander("fede_both")
 group_both.set_pose_reference_frame("yumi_body")
-group_both.set_planning_time(20)
+group_both.set_planning_time(10)
+group_both.set_num_planning_attempts(10)
 group_both.allow_replanning(True)
 
 # Arms end effectors
@@ -35,8 +36,6 @@ left_arm = "yumi_link_7_l"
 group_left_gripper = 'left_gripper'
 group_right_gripper = 'right_gripper'
 
-# Useful Variables
-Z = 2
 
 # Publish the trajectory on Rviz
 # rospy.Publisher('/move_group/display_planned_path', moveit_msgs.msg.DisplayTrajectory, queue_size=20)
@@ -164,6 +163,8 @@ def picking(obj, arm):
     else:
         home_pose = home_R
         grip = RIGHT
+
+    gripper_effort(grip, -20)
     group_both.set_pose_target(pose_P, arm)
     pick = group_both.plan()
     # Evaluate the time for picking
@@ -247,42 +248,10 @@ def run():
     rospy.logdebug(group_both.get_pose_reference_frame())
 
     # RETURN TO HOME
-    group_both.set_pose_target(home_L, left_arm)
-    plan = group_both.plan()
-    # Evaluate the time of the trajectory
-    evaluate_time(plan)
-    group_both.execute(plan)
-    group_both.stop()
-    # Open Fingers
-    gripper_effort(LEFT, -20)
+    home()
 
     # Picking
-    pose_L = deepcopy(T2.pose_msg)
-    pose_L.pose.position.z += tube_length/2 + 0.12
-    pose_L.pose.orientation = group_both.get_current_pose(left_arm).pose.orientation
-
-    group_both.set_pose_target(pose_L, left_arm)
-    pick = group_both.plan()
-
-    # Evaluate the time of the trajectory
-    evaluate_time(pick)
-    # Execute trajectory
-    group_both.execute(pick)
-    group_both.stop()
-
-    # Attach test tube
-    T2.attach_object(left_arm)
-    gripper_effort(LEFT, 10)
-
-    # Homing
-    group_both.set_pose_target(home_L, left_arm)
-    plan = group_both.plan()
-
-    # Evaluate the time of the trajectory
-    evaluate_time(plan)
-    # Execute trajectory
-    group_both.execute(plan)
-    group_both.stop()
+    picking(T2, left_arm)
 
     # Placing
     group_both.set_pose_target(placePS[1], left_arm)
