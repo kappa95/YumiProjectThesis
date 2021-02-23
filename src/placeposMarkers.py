@@ -33,6 +33,22 @@ placeMarker2.pose.position.y = 0.35
 # append the placeMarker into the place_array
 placeArray.markers.append(placeMarker2)
 
+# Create the buffer markers
+bufferMarker1 = deepcopy(placeMarker1)
+bufferMarker1.id = 2
+bufferMarker1.color.r = 0.0
+bufferMarker1.color.g = 1.0
+bufferMarker1.pose.position.x = -0.1
+bufferMarker1.pose.position.y = -0.025
+
+bufferMarker2 = deepcopy(bufferMarker1)
+bufferMarker2.id += 1
+bufferMarker2.pose.position.y += 0.05
+
+placeArray.markers.append(bufferMarker1)
+placeArray.markers.append(bufferMarker2)
+
+
 marker_publisher = rospy.Publisher("/placepos", MarkerArray, queue_size=20)
 
 if __name__ == '__main__':
