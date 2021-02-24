@@ -353,14 +353,27 @@ def run():
     t3_R = evaluate_time(homing2_L)
     homing_L_state = create_robotstate(homing2_L)
     group_both.set_start_state(homing_L_state)
+    # Picking the second test tube and placing the first in mean while
     (t4_R, place_R, return_home_R) = placing_both(T1, T2)
+    buffer_second_tube = create_robotstate(return_home_R)
+    # Picking from buffer for left arm
+    group_both.set_start_state(buffer_second_tube)
+    group_both.clear_pose_targets()
+    group_both.set_pose_target(placePS[3], left_arm)
+    group_both.set_pose_target(home_R, right_arm)
+    # Planning the exchange
+    buffer_exchange2 = group_both.plan()
+    t5_R = evaluate_time(buffer_exchange2)
+    placing2 = create_robotstate(buffer_exchange2)
+    group_both.set_start_state(placing2)
+    (t6_R, place_R2, return_home_R2) = placing(T2)
 
     # Evaluation of the time for Right arm
-    duration_R = t1_R + t2_R + t3_R + t4_R
-    rospy.loginfo('TOTAL TIME Left: {}s'.format(duration_L))
+    duration_R = t1_R + t2_R + t3_R + t4_R + t5_R + t6_R
+    rospy.loginfo('TOTAL TIME Left: {}s'.format(2 * duration_L))
     rospy.loginfo('TOTAL TIME Right: {}s'.format(duration_R))
 
-    if duration_R < 2 * duration_L:
+    if duration_R < 2 * duration_L + 20:
         rospy.loginfo('Motion Right wins')
         # # RIGHT motion
         # Execute picking
@@ -395,6 +408,19 @@ def run():
         group_both.stop()
         T2.detach_object(right_arm)
         gripper_effort(RIGHT, -20)
+        # buffer exchange
+        group_both.execute(buffer_exchange2)
+        group_both.stop()
+        # Attach object and close gripper
+        T2.attach_object(left_arm)
+        gripper_effort(LEFT, 10)
+        group_both.execute(place_R2)
+        group_both.stop()
+        # Detach object and open gripper
+        T2.detach_object(left_arm)
+        gripper_effort(LEFT, -20)
+        group_both.execute(return_home_R2)
+        group_both.stop()
     else:
         rospy.loginfo('Motion Left wins')
         # # LEFT motion
