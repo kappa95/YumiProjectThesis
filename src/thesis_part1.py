@@ -47,8 +47,8 @@ group_right_gripper = 'right_gripper'
 
 
 # Home position
-home_L = [0.300, 0.250, 0.380, 0, PI, 0]
-home_R = [0.300, -0.250, 0.380, 0, PI, PI]
+home_L = [0.300, 0.300, 0.380, 0, PI, 0]
+home_R = [0.300, -0.300, 0.380, 0, PI, PI]
 
 # Adding the test tube
 tube_length = 0.1030
@@ -115,6 +115,20 @@ class PlaceSub:
         self.placeMarkers = []  # type: List[Pose]
         self.msg = rospy.wait_for_message("/placepos", topic_type=MarkerArray)  # type: MarkerArray
         self.placeMarkers = [j for j in self.msg.markers]  # type: List[Marker]
+
+
+# Take Place positions
+placeSub = PlaceSub()
+# Place positions
+# TODO: Check that probably here there are the positions of the buffers.
+placePS = []
+for i in placeSub.placeMarkers:
+    temp = PoseStamped()
+    temp.header.frame_id = i.header.frame_id
+    temp.pose = i.pose
+    temp.pose.orientation = group_both.get_current_pose(left_arm).pose.orientation
+    temp.pose.position.z += tube_length / 2 + 0.136 + 0.01 + 0.03002
+    placePS.append(temp)
 
 
 def getting_joints_from_plan(plan):
@@ -204,7 +218,8 @@ def picking(obj, arm):
         home_pose = home_L
         grip = LEFT
     else:
-        home_pose = home_R
+        # home_pose = home_R
+        home_pose = placePS[3]
         grip = RIGHT
 
     gripper_effort(grip, -20)
@@ -247,20 +262,6 @@ def placing(obj):
         pass
 
 
-# Take Place positions
-placeSub = PlaceSub()
-# Place positions
-# TODO: Check that probably here there are the positions of the buffers.
-placePS = []
-for i in placeSub.placeMarkers:
-    temp = PoseStamped()
-    temp.header.frame_id = i.header.frame_id
-    temp.pose = i.pose
-    temp.pose.orientation = group_both.get_current_pose(left_arm).pose.orientation
-    temp.pose.position.z += tube_length / 2 + 0.136 + 0.01 + 0.03002
-    placePS.append(temp)
-
-
 def run():
     # Open grippers
     gripper_effort(LEFT, -20)
@@ -289,28 +290,90 @@ def run():
     group_both.set_start_state_to_current_state()
     home()
 
-    # Evaluate the time for the LEFT arm cycle: pick + home
-    (t1, pick, homing) = picking(T1, left_arm)
-    home_robotstate = create_robotstate(homing)
+    # Evaluate the time for the LEFT arm cycle: pick + home + place + home
+    (t1_L, pick_L, homing_L) = picking(T1, left_arm)
+    home_robotstate = create_robotstate(homing_L)
     group_both.set_start_state(home_robotstate)
-    (t2, place, return_home) = placing(T1)
-    # Execute Picking
-    group_both.execute(pick)
-    group_both.stop()
+    (t2_L, place_L, return_home_L) = placing(T1)
+    duration_L = t1_L + t2_L  # single test tube
 
+    # Evaluate the time for the RIGHT arm cycle: pick + buffer + pick2 + place
+    (t1_R, pick_R, buffer_R) = picking(T1, right_arm)
+
+    buffer_R_state = create_robotstate(buffer_R)
+    # Picking from buffer for left arm
+    group_both.set_start_state(buffer_R_state)
+    group_both.clear_pose_targets()
+    group_both.set_pose_target(placePS[3], left_arm)
+    group_both.set_pose_target(home_R, right_arm)
+    # Planning the exchange
+    buffer_exchange = group_both.plan()
+    t2_R = evaluate_time(buffer_exchange)
+
+    buffer_L_state = create_robotstate(buffer_exchange)
+    # Picking from buffer for left arm
+    group_both.set_start_state(buffer_L_state)
+    group_both.clear_pose_targets()
+    group_both.set_pose_target(home_L, left_arm)
+    # Planning the homing of left arm
+    homing2_L = group_both.plan()
+    t3_R = evaluate_time(homing2_L)
+    homing_L_state = create_robotstate(homing2_L)
+    group_both.set_start_state(homing_L_state)
+    (t4_R, place_R, return_home_R) = placing(T1)
+
+    # Evaluation of the time for Right arm
+    duration_R = t1_R + t2_R + t3_R + t4_R
+    rospy.loginfo('TOTAL TIME Left: {}s'.format(duration_L))
+    rospy.loginfo('TOTAL TIME Right: {}s'.format(duration_R))
+
+    # # RIGHT motion
+    # Execute picking
+    group_both.execute(pick_R)
+    group_both.stop()
     # Attach Test tube
+    T1.attach_object(right_arm)
+    gripper_effort(RIGHT, 10)
+    # Going to the buffer position
+    group_both.execute(buffer_R)
+    group_both.stop()
+    # Open the gripper and detach the object
+    T1.detach_object(right_arm)
+    gripper_effort(RIGHT, -20)
+    # buffer exchange
+    group_both.execute(buffer_exchange)
+    group_both.stop()
     T1.attach_object(left_arm)
     gripper_effort(LEFT, 10)
-    group_both.execute(homing)
+    # homing the L
+    group_both.execute(homing2_L)
     group_both.stop()
-
-    # Execute Placing
-    group_both.execute(place)
+    # placing
+    group_both.execute(place_R)
     group_both.stop()
     T1.detach_object(left_arm)
     gripper_effort(LEFT, -20)
-    group_both.execute(return_home)
-    rospy.loginfo('TOTAL TIME: {}s'.format(t1+t2))
+    # return to home
+    group_both.execute(return_home_R)
+    group_both.stop()
+
+    # # # LEFT motion
+    # # Execute Picking
+    # group_both.execute(pick_L)
+    # group_both.stop()
+    #
+    # # Attach Test tube
+    # T1.attach_object(left_arm)
+    # gripper_effort(LEFT, 10)
+    # group_both.execute(homing_L)
+    # group_both.stop()
+    #
+    # # Execute Placing
+    # group_both.execute(place_L)
+    # group_both.stop()
+    # T1.detach_object(left_arm)
+    # gripper_effort(LEFT, -20)
+    # group_both.execute(return_home_L)
 
 
 if __name__ == '__main__':
