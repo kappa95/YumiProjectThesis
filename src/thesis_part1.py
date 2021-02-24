@@ -214,8 +214,8 @@ def picking(obj, arm):
     t1 = evaluate_time(pick)
     if pick.joint_trajectory.points:
         # Creating a RobotState for evaluate the next trajectory
-        create_robotstate(pick)
-
+        robot_state = create_robotstate(pick)
+        group_both.set_start_state(robot_state)
         group_both.set_pose_target(home_pose, arm)
         homing = group_both.plan()
         # Evaluate the duration of the planning
@@ -227,21 +227,24 @@ def picking(obj, arm):
 
 
 def placing(obj):
-    # type: (TestTube) -> float
+    # type: (TestTube) -> List[float, RobotTrajectory, RobotTrajectory]
     idx = obj.id  # Index of the test tube from the class
     group_both.set_pose_target(placePS[idx], left_arm)
     placePlan = group_both.plan()
     # Evaluate the time of the trajectory
     t1 = evaluate_time(placePlan)
-    group_both.execute(placePlan)
-    group_both.stop()
-    obj.detach_object(left_arm)
-    gripper_effort(LEFT, -20)
-    group_both.set_pose_target(home_L, left_arm)
-    plan = group_both.plan()
-    t2 = evaluate_time(plan)
-    group_both.execute(plan)
-    return t1 + t2
+    if placePlan.joint_trajectory.points:
+        # Creating a RobotState for evaluate the next trajectory
+        group_both.clear_pose_targets()
+        place_state = create_robotstate(placePlan)
+        group_both.set_start_state(place_state)
+        group_both.set_pose_target(home_L, left_arm)
+        return_home = group_both.plan()
+        t2 = evaluate_time(return_home)
+        return [(t1 + t2), placePlan, return_home]
+    else:
+        rospy.logerr('Planning failed')
+        pass
 
 
 # Take Place positions
@@ -286,9 +289,12 @@ def run():
     group_both.set_start_state_to_current_state()
     home()
 
-    # Evaluate the time for the LEFT arm cycle
-    (t, pick, homing) = picking(T1, left_arm)
-    # # Execute Picking
+    # Evaluate the time for the LEFT arm cycle: pick + home
+    (t1, pick, homing) = picking(T1, left_arm)
+    home_robotstate = create_robotstate(homing)
+    group_both.set_start_state(home_robotstate)
+    (t2, place, return_home) = placing(T1)
+    # Execute Picking
     group_both.execute(pick)
     group_both.stop()
 
@@ -297,6 +303,14 @@ def run():
     gripper_effort(LEFT, 10)
     group_both.execute(homing)
     group_both.stop()
+
+    # Execute Placing
+    group_both.execute(place)
+    group_both.stop()
+    T1.detach_object(left_arm)
+    gripper_effort(LEFT, -20)
+    group_both.execute(return_home)
+    rospy.loginfo('TOTAL TIME: {}s'.format(t1+t2))
 
 
 if __name__ == '__main__':
