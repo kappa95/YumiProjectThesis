@@ -265,6 +265,36 @@ def placing(obj):
         pass
 
 
+def placing_both(obj_place, obj_pick):
+    # type: (TestTube, TestTube) -> List[float, RobotTrajectory, RobotTrajectory]
+    # Pose of the picking object
+    pose_P = deepcopy(obj_pick.pose_msg)
+    pose_P.pose.position.z += tube_length/2 + 0.12
+    pose_P.pose.orientation = group_both.get_current_pose(right_arm).pose.orientation
+
+    idx = obj_place.id  # Index of the test tube to place
+    # Left arm should place the object and in the meanwhile the right arm picking the next
+    gripper_effort(RIGHT, -20)
+    group_both.set_pose_target(placePS[idx], left_arm)
+    group_both.set_pose_target(pose_P, right_arm)
+    placePlan = group_both.plan()
+    # Evaluate the time of the trajectory
+    t1 = evaluate_time(placePlan)
+    if placePlan.joint_trajectory.points:
+        # Creating a RobotState for evaluate the next trajectory
+        group_both.clear_pose_targets()
+        place_state = create_robotstate(placePlan)
+        group_both.set_start_state(place_state)
+        group_both.set_pose_target(home_L, left_arm)
+        group_both.set_pose_target(placePS[3], right_arm)
+        return_home = group_both.plan()
+        t2 = evaluate_time(return_home)
+        return [(t1 + t2), placePlan, return_home]
+    else:
+        rospy.logerr('Planning failed')
+        pass
+
+
 def run():
     # Open grippers
     gripper_effort(LEFT, -20)
@@ -293,14 +323,14 @@ def run():
     group_both.set_start_state_to_current_state()
     home()
 
-    # Evaluate the time for the LEFT arm cycle: pick + home + place + home
+    # # Evaluate the time for the LEFT arm cycle: pick + home + place + home
     (t1_L, pick_L, homing_L) = picking(T1, left_arm)
     home_robotstate = create_robotstate(homing_L)
     group_both.set_start_state(home_robotstate)
     (t2_L, place_L, return_home_L) = placing(T1)
     duration_L = t1_L + t2_L  # single test tube
 
-    # Evaluate the time for the RIGHT arm cycle: pick + buffer + pick2 + place
+    # # Evaluate the time for the RIGHT arm cycle: pick + buffer + pick2 + place
     (t1_R, pick_R, buffer_R) = picking(T1, right_arm)
 
     buffer_R_state = create_robotstate(buffer_R)
@@ -323,14 +353,14 @@ def run():
     t3_R = evaluate_time(homing2_L)
     homing_L_state = create_robotstate(homing2_L)
     group_both.set_start_state(homing_L_state)
-    (t4_R, place_R, return_home_R) = placing(T1)
+    (t4_R, place_R, return_home_R) = placing_both(T1, T2)
 
     # Evaluation of the time for Right arm
     duration_R = t1_R + t2_R + t3_R + t4_R
     rospy.loginfo('TOTAL TIME Left: {}s'.format(duration_L))
     rospy.loginfo('TOTAL TIME Right: {}s'.format(duration_R))
 
-    if duration_R < duration_L:
+    if duration_R < 2 * duration_L:
         rospy.loginfo('Motion Right wins')
         # # RIGHT motion
         # Execute picking
@@ -358,9 +388,13 @@ def run():
         group_both.stop()
         T1.detach_object(left_arm)
         gripper_effort(LEFT, -20)
+        T2.attach_object(right_arm)
+        gripper_effort(RIGHT, 10)
         # return to home
         group_both.execute(return_home_R)
         group_both.stop()
+        T2.detach_object(right_arm)
+        gripper_effort(RIGHT, -20)
     else:
         rospy.loginfo('Motion Left wins')
         # # LEFT motion
