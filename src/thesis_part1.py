@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+"""It works with a different modification in the moveit config of the KTH
+New modification: Changed the parameter in the trajectory_execution.launch.xml"""
+
+
 from copy import deepcopy
 from typing import List
 from moveit_msgs.msg import *
@@ -211,33 +215,11 @@ def picking(obj, arm):
     if pick.joint_trajectory.points:
         # Creating a RobotState for evaluate the next trajectory
         create_robotstate(pick)
-        # joint_state = JointState()
-        # joint_state.header.stamp = rospy.Time.now()
-        # joint_state.name = pick.joint_trajectory.joint_names
-        #
-        # plan_dict = message_converter.convert_ros_message_to_dictionary(pick)  # type: dict
-        # positions = plan_dict['joint_trajectory']['points'][-1]['positions']
-        # # rospy.logdebug(
-        # #     'CHECK THE TRAJECTORY POINTS: \n {}'.format(positions))
-        # joint_state.position = positions
-        # robot_state = RobotState()
-        # robot_state.joint_state = joint_state
-        # group_both.set_start_state(robot_state)
-        # # Execute Picking
-        # group_both.execute(pick)
-        # group_both.stop()
-        #
-        # # Attach Test tube
-        # obj.attach_object(arm)
 
-        # gripper_effort(grip, 10)
         group_both.set_pose_target(home_pose, arm)
         homing = group_both.plan()
         # Evaluate the duration of the planning
         t2 = evaluate_time(homing)
-        # # Execute the trajectory
-        # group_both.execute(plan)
-        # group_both.stop()
         return [(t1 + t2), pick, homing]
     else:
         rospy.logerr('Planning failed')
