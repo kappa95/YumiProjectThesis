@@ -10,6 +10,7 @@ from moveit_msgs.msg import *
 from moveit_commander import *
 from visualization_msgs.msg import MarkerArray, Marker
 from rospy_message_converter import message_converter
+import sys
 import tf
 import yaml
 from geometry_msgs.msg import *
@@ -166,6 +167,8 @@ def create_robotstate(plan):
         robot_state = RobotState()
         robot_state.joint_state = joint_state
         return robot_state
+    else:
+        sys.exit(1)
 
 
 def evaluate_time(plan):
@@ -327,53 +330,56 @@ def run():
     rospy.loginfo('TOTAL TIME Left: {}s'.format(duration_L))
     rospy.loginfo('TOTAL TIME Right: {}s'.format(duration_R))
 
-    # # RIGHT motion
-    # Execute picking
-    group_both.execute(pick_R)
-    group_both.stop()
-    # Attach Test tube
-    T1.attach_object(right_arm)
-    gripper_effort(RIGHT, 10)
-    # Going to the buffer position
-    group_both.execute(buffer_R)
-    group_both.stop()
-    # Open the gripper and detach the object
-    T1.detach_object(right_arm)
-    gripper_effort(RIGHT, -20)
-    # buffer exchange
-    group_both.execute(buffer_exchange)
-    group_both.stop()
-    T1.attach_object(left_arm)
-    gripper_effort(LEFT, 10)
-    # homing the L
-    group_both.execute(homing2_L)
-    group_both.stop()
-    # placing
-    group_both.execute(place_R)
-    group_both.stop()
-    T1.detach_object(left_arm)
-    gripper_effort(LEFT, -20)
-    # return to home
-    group_both.execute(return_home_R)
-    group_both.stop()
+    if duration_R < duration_L:
+        rospy.loginfo('Motion Right wins')
+        # # RIGHT motion
+        # Execute picking
+        group_both.execute(pick_R)
+        group_both.stop()
+        # Attach Test tube
+        T1.attach_object(right_arm)
+        gripper_effort(RIGHT, 10)
+        # Going to the buffer position
+        group_both.execute(buffer_R)
+        group_both.stop()
+        # Open the gripper and detach the object
+        T1.detach_object(right_arm)
+        gripper_effort(RIGHT, -20)
+        # buffer exchange
+        group_both.execute(buffer_exchange)
+        group_both.stop()
+        T1.attach_object(left_arm)
+        gripper_effort(LEFT, 10)
+        # homing the L
+        group_both.execute(homing2_L)
+        group_both.stop()
+        # placing
+        group_both.execute(place_R)
+        group_both.stop()
+        T1.detach_object(left_arm)
+        gripper_effort(LEFT, -20)
+        # return to home
+        group_both.execute(return_home_R)
+        group_both.stop()
+    else:
+        rospy.loginfo('Motion Left wins')
+        # # LEFT motion
+        # Execute Picking
+        group_both.execute(pick_L)
+        group_both.stop()
 
-    # # # LEFT motion
-    # # Execute Picking
-    # group_both.execute(pick_L)
-    # group_both.stop()
-    #
-    # # Attach Test tube
-    # T1.attach_object(left_arm)
-    # gripper_effort(LEFT, 10)
-    # group_both.execute(homing_L)
-    # group_both.stop()
-    #
-    # # Execute Placing
-    # group_both.execute(place_L)
-    # group_both.stop()
-    # T1.detach_object(left_arm)
-    # gripper_effort(LEFT, -20)
-    # group_both.execute(return_home_L)
+        # Attach Test tube
+        T1.attach_object(left_arm)
+        gripper_effort(LEFT, 10)
+        group_both.execute(homing_L)
+        group_both.stop()
+
+        # Execute Placing
+        group_both.execute(place_L)
+        group_both.stop()
+        T1.detach_object(left_arm)
+        gripper_effort(LEFT, -20)
+        group_both.execute(return_home_L)
 
 
 if __name__ == '__main__':
