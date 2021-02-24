@@ -253,15 +253,6 @@ def run():
     # Placing
     placing(T1)
 
-    # Useful listener for having the pose of the object
-    # # The actual pose is read in the planning reference frame --> world one
-    # rospy.logdebug('Actual Pose:\n{}'.format(group_both.get_current_pose(left_arm).pose))
-    # tfl = tf.TransformListener()
-    # tfl.waitForTransform("base", "world", rospy.Time(0), rospy.Duration(5))
-    # pose_transformed = tfl.transformPose("world", placePS[0])
-    # rospy.logdebug('Commanded Pose:\n{}'.format(pose_transformed))
-    # rospy.logdebug(group_both.get_pose_reference_frame())
-
     # RETURN TO HOME
     home()
 
