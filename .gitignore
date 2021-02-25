@@ -23,6 +23,7 @@ wheels/
 pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
+src/plans/
 .installed.cfg
 *.egg
 MANIFEST
