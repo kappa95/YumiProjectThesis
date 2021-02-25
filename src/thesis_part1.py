@@ -12,6 +12,7 @@ from visualization_msgs.msg import MarkerArray, Marker
 from rospy_message_converter import message_converter
 import sys
 import tf
+import os
 import yaml
 from geometry_msgs.msg import *
 from yumi_utils import PI, gripper_effort, LEFT, RIGHT
@@ -176,7 +177,7 @@ def create_robotstate(plan):
         robot_state.joint_state = joint_state
         return robot_state
     else:
-        sys.exit(1)
+        pass
 
 
 def evaluate_time(plan):
@@ -219,7 +220,8 @@ def picking(obj, arm):
 
     :param obj: Object to pick
     :param arm: Arm used
-    :return: Duration time for picking
+    :rtype: list[float, RobotTrajectory, RobotTrajectory] or tuple[float, RobotTrajectory, RobotTrajectory]
+    :return: Duration time for picking and RobotTrajectories for picking
     """
     pose_P = deepcopy(obj.pose_msg)
     pose_P.pose.position.z += tube_length/2 + 0.12
@@ -246,7 +248,7 @@ def picking(obj, arm):
         homing = group_both.plan()
         # Evaluate the duration of the planning
         t2 = evaluate_time(homing)
-        return [(t1 + t2), pick, homing]
+        return [(t1 + t2), pick, homing]  # type: list[float, RobotTrajectory, RobotTrajectory]
     else:
         rospy.logerr('Planning failed')
         pass
@@ -331,7 +333,7 @@ def run():
     group_both.set_start_state_to_current_state()
     home()
 
-    # # Evaluate the time for the LEFT arm cycle: pick + home + place + home
+    # # Evaluate the time for the LEFT arm cycle
     (t1_L, pick_L, homing_L) = picking(T1, left_arm)
     home_robotstate = create_robotstate(homing_L)
     group_both.set_start_state(home_robotstate)
@@ -340,8 +342,8 @@ def run():
     return_home_L_state = create_robotstate(return_home_L)
     group_both.set_start_state(return_home_L_state)
     # 2nd test tube
-    (t3_L, pick2_L, homing2_L) = picking(T2, left_arm)
-    home2_robotstate = create_robotstate(homing2_L)
+    (t3_L, pick2_L, homing_L2) = picking(T2, left_arm)
+    home2_robotstate = create_robotstate(homing_L2)
     group_both.set_start_state(home2_robotstate)
     (t4_L, place2_L, return_home2_L) = placing(T2)
     duration_L = t1_L + t2_L + t3_L + t4_L
@@ -465,7 +467,7 @@ def run():
         # Attach Test tube
         T2.attach_object(left_arm)
         gripper_effort(LEFT, 10)
-        group_both.execute(homing2_L)
+        group_both.execute(homing_L2)
         group_both.stop()
 
         # Execute Placing
@@ -475,6 +477,19 @@ def run():
         gripper_effort(LEFT, -20)
         group_both.execute(return_home2_L)
         group_both.stop()
+
+    # # Save the plans for a future analysis
+    # Save the LEFT plan
+    left_file = os.path.join(os.path.relpath('plans', start=os.curdir), 'plan_L.yaml')
+    with open(left_file, 'w') as file_save:
+        yaml.dump(pick_L, file_save, default_flow_style=True)
+        yaml.dump(homing_L, file_save, default_flow_style=True)
+        yaml.dump(place_L, file_save, default_flow_style=True)
+        yaml.dump(return_home_L, file_save, default_flow_style=True)
+        yaml.dump(pick2_L, file_save, default_flow_style=True)
+        yaml.dump(homing2_L, file_save, default_flow_style=True)
+        yaml.dump(place2_L, file_save, default_flow_style=True)
+        yaml.dump(return_home2_L, file_save, default_flow_style=True)
 
 
 if __name__ == '__main__':
