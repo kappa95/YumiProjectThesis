@@ -16,7 +16,15 @@ import yaml
 from geometry_msgs.msg import *
 from yumi_utils import PI, gripper_effort, LEFT, RIGHT
 from yumi_hw.srv import *
-
+# from moveit_msgs.msg import MoveItErrorCodes
+#
+#
+# moveit_error_dict = {}
+#
+# for n in MoveItErrorCodes.__dict__.keys():
+#     if not n[:1] == '_':
+#         code = MoveItErrorCodes.__dict__[n]
+#         moveit_error_dict[code] = n
 
 # Initialization of Moveit
 rospy.loginfo('Starting the Initialization')
@@ -328,7 +336,15 @@ def run():
     home_robotstate = create_robotstate(homing_L)
     group_both.set_start_state(home_robotstate)
     (t2_L, place_L, return_home_L) = placing(T1)
-    duration_L = t1_L + t2_L  # single test tube
+    # Create the initial state after placing the tube
+    return_home_L_state = create_robotstate(return_home_L)
+    group_both.set_start_state(return_home_L_state)
+    # 2nd test tube
+    (t3_L, pick2_L, homing2_L) = picking(T2, left_arm)
+    home2_robotstate = create_robotstate(homing2_L)
+    group_both.set_start_state(home2_robotstate)
+    (t4_L, place2_L, return_home2_L) = placing(T2)
+    duration_L = t1_L + t2_L + t3_L + t4_L
 
     # # Evaluate the time for the RIGHT arm cycle: pick + buffer + pick2 + place
     (t1_R, pick_R, buffer_R) = picking(T1, right_arm)
@@ -370,10 +386,10 @@ def run():
 
     # Evaluation of the time for Right arm
     duration_R = t1_R + t2_R + t3_R + t4_R + t5_R + t6_R
-    rospy.loginfo('TOTAL TIME Left: {}s'.format(2 * duration_L))
+    rospy.loginfo('TOTAL TIME Left: {}s'.format(duration_L))
     rospy.loginfo('TOTAL TIME Right: {}s'.format(duration_R))
 
-    if duration_R < 2 * duration_L + 20:
+    if duration_R < duration_L:
         rospy.loginfo('Motion Right wins')
         # # RIGHT motion
         # Execute picking
@@ -440,6 +456,25 @@ def run():
         T1.detach_object(left_arm)
         gripper_effort(LEFT, -20)
         group_both.execute(return_home_L)
+        group_both.stop()
+        # 2nd tube
+        # Execute Picking
+        group_both.execute(pick2_L)
+        group_both.stop()
+
+        # Attach Test tube
+        T2.attach_object(left_arm)
+        gripper_effort(LEFT, 10)
+        group_both.execute(homing2_L)
+        group_both.stop()
+
+        # Execute Placing
+        group_both.execute(place2_L)
+        group_both.stop()
+        T2.detach_object(left_arm)
+        gripper_effort(LEFT, -20)
+        group_both.execute(return_home2_L)
+        group_both.stop()
 
 
 if __name__ == '__main__':
