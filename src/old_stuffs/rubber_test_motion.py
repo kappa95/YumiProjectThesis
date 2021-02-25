@@ -4,7 +4,7 @@
 # import copy
 import rospy
 import moveit_commander
-import yumi_utils as yumi
+import src.yumi_utils as yumi
 # import moveit_msgs.msg
 # import geometry_msgs.msg
 # from std_srvs.srv import Empty

@@ -7,7 +7,7 @@ from moveit_msgs.msg import *
 from moveit_commander import *
 from std_msgs.msg import Bool
 import geometry_msgs.msg
-from yumi_utils import PI, gripper_effort
+from src.yumi_utils import PI, gripper_effort
 from yumi_hw.srv import *
 from tf.transformations import quaternion_from_euler, concatenate_matrices, euler_matrix, quaternion_from_matrix
 
