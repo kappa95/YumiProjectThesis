@@ -17,6 +17,8 @@ import yaml
 from geometry_msgs.msg import *
 from yumi_utils import PI, gripper_effort, LEFT, RIGHT
 from yumi_hw.srv import *
+from trac_ik_python.trac_ik import IK
+
 # from moveit_msgs.msg import MoveItErrorCodes
 #
 #
@@ -40,9 +42,16 @@ rospy.sleep(1.0)
 
 group_both = MoveGroupCommander("fede_both")
 group_both.set_pose_reference_frame("yumi_body")
+group_both.set_planner_id("RRT")
 group_both.set_planning_time(20)
 group_both.set_num_planning_attempts(10)
 group_both.allow_replanning(True)
+
+group_right = MoveGroupCommander("right_arm")
+group_right.set_pose_reference_frame("yumi_body")
+group_right.set_planning_time(20)
+group_right.set_num_planning_attempts(10)
+group_right.allow_replanning(True)
 
 # Arms end effectors
 right_arm = "yumi_link_7_r"
@@ -50,6 +59,17 @@ left_arm = "yumi_link_7_l"
 group_left_gripper = 'left_gripper'
 group_right_gripper = 'right_gripper'
 
+# Using the TracIK wrapper for having IK
+ik_solver_right = IK("yumi_body", right_arm)
+sol_ik = ik_solver_right.get_ik(
+    group_right.get_current_joint_values(),  # Current state as seed
+    0.300, -0.300, 0.380,  # Position
+    0.0, 0.0, 0.0, 1.0,  # Quaternion orientation
+    0.01, 0.01, 0.01,  # Linear tolerance X, Y, Z
+    0.1, 0.1, 0.1  # Angular tolerance X, Y, Z
+)
+
+print(sol_ik)
 
 # Publish the trajectory on Rviz
 # rospy.Publisher('/move_group/display_planned_path', moveit_msgs.msg.DisplayTrajectory, queue_size=20)
