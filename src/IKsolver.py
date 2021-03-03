@@ -10,7 +10,7 @@ from tf.transformations import quaternion_from_euler
 from geometry_msgs.msg import PoseStamped
 
 right_arm = "yumi_link_7_r"
-group = "fede_both"
+group = "right_arm"
 robot = RobotCommander()
 
 # point = PoseStamped()
