@@ -2,7 +2,13 @@ cmake_minimum_required(VERSION 3.0.2)
 project(YumiProjectThesis)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+add_compile_options(-std=c++11)
+
+find_package(Eigen3 REQUIRED)
+# Eigen 3.2 (Wily) only provides EIGEN3_INCLUDE_DIR, not EIGEN3_INCLUDE_DIRS
+if(NOT EIGEN3_INCLUDE_DIRS)
+  set(EIGEN3_INCLUDE_DIRS ${EIGEN3_INCLUDE_DIR})
+endif()
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -12,6 +18,19 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   sensor_msgs
   std_msgs
+  interactive_markers
+  moveit_core
+  moveit_visual_tools
+  moveit_ros_planning
+  moveit_ros_planning_interface
+  pluginlib
+  geometric_shapes
+  pcl_ros
+  pcl_conversions
+  rosbag
+  tf2_ros
+  tf2_eigen
+  tf2_geometry_msgs
 )
 find_package(OpenCV 2)
 ## System dependencies are found with CMake's conventions
@@ -104,10 +123,17 @@ find_package(OpenCV 2)
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES YumiProjectThesis
-#  CATKIN_DEPENDS cv_bridge opencv2 rospy sensor_msgs std_msgs
-#  DEPENDS system_lib
+  LIBRARIES
+    interactivity_utils
+  INCLUDE_DIRS
+    ${THIS_PACKAGE_INCLUDE_DIRS}
+  CATKIN_DEPENDS
+    moveit_core
+    moveit_visual_tools
+    moveit_ros_planning_interface
+    interactive_markers
+  DEPENDS
+    EIGEN3
 )
 
 ###########
@@ -121,6 +147,9 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
+add_executable(yumi_planning_pipeline_tutorial src/yumi_cpp_test.cpp)
+target_link_libraries(yumi_planning_pipeline_tutorial ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+# install(TARGET yumi_planning_pipeline_tutorial DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/YumiProjectThesis.cpp
