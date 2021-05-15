@@ -8,6 +8,7 @@ from copy import deepcopy
 from typing import List
 from moveit_msgs.msg import *
 from moveit_commander import *
+from trajectory_msgs.msg import JointTrajectoryPoint
 from visualization_msgs.msg import MarkerArray, Marker
 from rospy_message_converter import message_converter
 import sys
@@ -18,6 +19,7 @@ from geometry_msgs.msg import *
 from yumi_utils import PI, gripper_effort, LEFT, RIGHT
 from yumi_hw.srv import *
 from trac_ik_python.trac_ik import IK
+import matplotlib.pyplot as plt
 
 # from moveit_msgs.msg import MoveItErrorCodes
 #
@@ -211,9 +213,11 @@ def evaluate_time(plan):
     """
     # Check if the plan is not empty
     if plan.joint_trajectory.points:
-        plan_dict = message_converter.convert_ros_message_to_dictionary(plan)  # type: dict
-        duration_time = plan_dict['joint_trajectory']['points'][-1]['time_from_start']  # type: dict
-        duration = int(duration_time['secs']) + int(duration_time['nsecs'])*10**(-9)  # type: float
+        p_last = plan.joint_trajectory.points.pop()  # type: JointTrajectoryPoint
+        duration = p_last.time_from_start.to_sec()
+        # plan_dict = message_converter.convert_ros_message_to_dictionary(plan)  # type: dict
+        # duration_time = plan_dict['joint_trajectory']['points'][-1]['time_from_start']  # type: dict
+        # duration = float(duration_time['nsecs'])*10**(-9)  # type: float
         rospy.loginfo('Estimated time of planning: {} s'.format(duration))
         return duration
     else:
@@ -268,7 +272,7 @@ def picking(obj, arm):
         homing = group_both.plan()
         # Evaluate the duration of the planning
         t2 = evaluate_time(homing)
-        return [(t1 + t2), pick, homing]  # type: list[float, RobotTrajectory, RobotTrajectory]
+        return [(t1 + t2), pick, homing]
     else:
         rospy.logerr('Planning failed')
         pass
@@ -278,7 +282,7 @@ def placing(obj):
     # type: (TestTube) -> List[float, RobotTrajectory, RobotTrajectory]
     idx = obj.id  # Index of the test tube from the class
     group_both.set_pose_target(placePS[idx], left_arm)
-    placePlan = group_both.plan()
+    placePlan = group_both.plan()  # type: RobotTrajectory
     # Evaluate the time of the trajectory
     t1 = evaluate_time(placePlan)
     if placePlan.joint_trajectory.points:
@@ -287,8 +291,8 @@ def placing(obj):
         place_state = create_robotstate(placePlan)
         group_both.set_start_state(place_state)
         group_both.set_pose_target(home_L, left_arm)
-        return_home = group_both.plan()
-        t2 = evaluate_time(return_home)
+        return_home = group_both.plan()  # type: RobotTrajectory
+        t2 = evaluate_time(return_home)  # type: float
         return [(t1 + t2), placePlan, return_home]
     else:
         rospy.logerr('Planning failed')
@@ -323,6 +327,30 @@ def placing_both(obj_place, obj_pick):
     else:
         rospy.logerr('Planning failed')
         pass
+
+
+def joint_diagram(plan):
+    # type: (RobotTrajectory) -> None
+    points = [p for p in plan.joint_trajectory.points]  # type: List[JointTrajectoryPoint]
+    # For each point, I separate each joint position
+    t = [tt.time_from_start.to_sec() for tt in points]
+    j1_l = [jj.positions[0] for jj in points]
+    j2_l = [jj.positions[1] for jj in points]
+    j7_l = [jj.positions[2] for jj in points]
+    j3_l = [jj.positions[3] for jj in points]
+    j4_l = [jj.positions[4] for jj in points]
+    j5_l = [jj.positions[5] for jj in points]
+    j6_l = [jj.positions[6] for jj in points]
+    plt.plot(t, j1_l, 'bo-')
+    plt.plot(t, j2_l, 'go-')
+    plt.plot(t, j7_l, 'ro-')
+    plt.plot(t, j3_l, 'co-')
+    plt.plot(t, j4_l, 'mo-')
+    plt.plot(t, j5_l, 'yo-')
+    plt.plot(t, j6_l, 'ko-')
+    plt.grid()
+    # plt.legend()
+    plt.show()
 
 
 def run():
@@ -498,18 +526,28 @@ def run():
         group_both.execute(return_home2_L)
         group_both.stop()
 
+    joint_diagram(pick_L)
+    joint_diagram(homing_L)
+    joint_diagram(place_L)
+    joint_diagram(place_L)
+    joint_diagram(return_home_L)
+    joint_diagram(pick2_L)
+    joint_diagram(homing_L2)
+    joint_diagram(place2_L)
+    joint_diagram(return_home2_L)
+
     # # Save the plans for a future analysis
     # Save the LEFT plan
-    left_file = os.path.join(os.path.relpath('plans', start=os.curdir), 'plan_L.yaml')
-    with open(left_file, 'w') as file_save:
-        yaml.dump(pick_L, file_save, default_flow_style=True)
-        yaml.dump(homing_L, file_save, default_flow_style=True)
-        yaml.dump(place_L, file_save, default_flow_style=True)
-        yaml.dump(return_home_L, file_save, default_flow_style=True)
-        yaml.dump(pick2_L, file_save, default_flow_style=True)
-        yaml.dump(homing2_L, file_save, default_flow_style=True)
-        yaml.dump(place2_L, file_save, default_flow_style=True)
-        yaml.dump(return_home2_L, file_save, default_flow_style=True)
+    # left_file = os.path.join(os.path.relpath('plans', start=os.curdir), 'plan_L.yaml')
+    # with open(left_file, 'w') as file_save:
+    #     yaml.dump(pick_L, file_save, default_flow_style=True)
+    #     yaml.dump(homing_L, file_save, default_flow_style=True)
+    #     yaml.dump(place_L, file_save, default_flow_style=True)
+    #     yaml.dump(return_home_L, file_save, default_flow_style=True)
+    #     yaml.dump(pick2_L, file_save, default_flow_style=True)
+    #     yaml.dump(homing2_L, file_save, default_flow_style=True)
+    #     yaml.dump(place2_L, file_save, default_flow_style=True)
+    #     yaml.dump(return_home2_L, file_save, default_flow_style=True)
 
 
 if __name__ == '__main__':
