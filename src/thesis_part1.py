@@ -173,9 +173,10 @@ def getting_joints_from_plan(plan):
     :rtype: list
     :return: List of joints of the end of the trajectory
     """
-    plan_dict = message_converter.convert_ros_message_to_dictionary(plan)  # type: dict
-    positions = plan_dict['joint_trajectory']['points'][-1]['positions']
-    return positions
+    positions = plan.joint_trajectory.points[-1]  # type: JointTrajectoryPoint
+    # plan_dict = message_converter.convert_ros_message_to_dictionary(plan)  # type: dict
+    # positions = plan_dict['joint_trajectory']['points'][-1]['positions']
+    return positions.positions
 
 
 def create_robotstate(plan):
@@ -199,31 +200,34 @@ def create_robotstate(plan):
         robot_state.joint_state = joint_state
         return robot_state
     else:
-        pass
+        raise RuntimeWarning("Error in creating the robotstate: points empty")
 
 
-def evaluate_time(plan):
+def evaluate_time(plan, info=''):
     """
     It returns the time duration of the trajectory
 
     :param plan: Plan msg of the trajectory
     :type plan: RobotTrajectory
+    :param info: info about the time
+    :type info: str
     :rtype: float
     :return: duration time of the trajectory
     """
     # Check if the plan is not empty
     if plan.joint_trajectory.points:
-        p_last = plan.joint_trajectory.points.pop()  # type: JointTrajectoryPoint
+        p_last = plan.joint_trajectory.points[-1]  # type: JointTrajectoryPoint
         duration = p_last.time_from_start.to_sec()
         # plan_dict = message_converter.convert_ros_message_to_dictionary(plan)  # type: dict
         # duration_time = plan_dict['joint_trajectory']['points'][-1]['time_from_start']  # type: dict
         # duration = float(duration_time['nsecs'])*10**(-9)  # type: float
-        rospy.loginfo('Estimated time of planning: {} s'.format(duration))
+        rospy.loginfo('Estimated time of planning {}: {} s'.format(info, duration))
         return duration
     else:
-        rospy.logwarn('The plan is empty')
-        duration = 0.0
-        return duration
+        raise RuntimeWarning("Plan is empty")
+        # rospy.logwarn('The plan is empty')
+        # duration = 0.0
+        # return duration
 
 
 def home():
@@ -231,19 +235,20 @@ def home():
     group_both.set_pose_target(home_L, left_arm)
     group_both.set_pose_target(home_R, right_arm)
     plan = group_both.plan()
-    home_duration = evaluate_time(plan)
+    home_duration = evaluate_time(plan, "homing")
     group_both.execute(plan)
     group_both.stop()
     return home_duration
 
 
-def picking(obj, arm):
-    # type: (TestTube, str) -> List[float, RobotTrajectory, RobotTrajectory]
+def picking(obj, arm, info=''):
+    # type: (TestTube, str, str) -> List[float, RobotTrajectory, RobotTrajectory]
     """
     Wrapper for picking
 
     :param obj: Object to pick
     :param arm: Arm used
+    :param info Info about what is doing
     :rtype: list[float, RobotTrajectory, RobotTrajectory] or tuple[float, RobotTrajectory, RobotTrajectory]
     :return: Duration time for picking and RobotTrajectories for picking
     """
@@ -263,7 +268,7 @@ def picking(obj, arm):
     group_both.set_pose_target(pose_P, arm)
     pick = group_both.plan()
     # Evaluate the time for picking
-    t1 = evaluate_time(pick)
+    t1 = evaluate_time(pick, info + "_t1")
     if pick.joint_trajectory.points:
         # Creating a RobotState for evaluate the next trajectory
         robot_state = create_robotstate(pick)
@@ -271,20 +276,20 @@ def picking(obj, arm):
         group_both.set_pose_target(home_pose, arm)
         homing = group_both.plan()
         # Evaluate the duration of the planning
-        t2 = evaluate_time(homing)
+        t2 = evaluate_time(homing, info + "_t2")
         return [(t1 + t2), pick, homing]
     else:
         rospy.logerr('Planning failed')
         pass
 
 
-def placing(obj):
-    # type: (TestTube) -> List[float, RobotTrajectory, RobotTrajectory]
+def placing(obj, info=''):
+    # type: (TestTube, str) -> List[float, RobotTrajectory, RobotTrajectory]
     idx = obj.id  # Index of the test tube from the class
     group_both.set_pose_target(placePS[idx], left_arm)
     placePlan = group_both.plan()  # type: RobotTrajectory
     # Evaluate the time of the trajectory
-    t1 = evaluate_time(placePlan)
+    t1 = evaluate_time(placePlan, info + "_t1_placing")
     if placePlan.joint_trajectory.points:
         # Creating a RobotState for evaluate the next trajectory
         group_both.clear_pose_targets()
@@ -292,15 +297,16 @@ def placing(obj):
         group_both.set_start_state(place_state)
         group_both.set_pose_target(home_L, left_arm)
         return_home = group_both.plan()  # type: RobotTrajectory
-        t2 = evaluate_time(return_home)  # type: float
+        t2 = evaluate_time(return_home, info + "_t2_placing")  # type: float
         return [(t1 + t2), placePlan, return_home]
     else:
-        rospy.logerr('Planning failed')
-        pass
+        raise RuntimeWarning("Error: Planning failed for placing")
+        # rospy.logerr('Planning failed')
+        # pass
 
 
-def placing_both(obj_place, obj_pick):
-    # type: (TestTube, TestTube) -> List[float, RobotTrajectory, RobotTrajectory]
+def placing_both(obj_place, obj_pick, info=''):
+    # type: (TestTube, TestTube, str) -> List[float, RobotTrajectory, RobotTrajectory]
     # Pose of the picking object
     pose_P = deepcopy(obj_pick.pose_msg)
     pose_P.pose.position.z += tube_length/2 + 0.12
@@ -313,7 +319,7 @@ def placing_both(obj_place, obj_pick):
     group_both.set_pose_target(pose_P, right_arm)
     placePlan = group_both.plan()
     # Evaluate the time of the trajectory
-    t1 = evaluate_time(placePlan)
+    t1 = evaluate_time(placePlan, info + "t1_placePlan_Placeboth")
     if placePlan.joint_trajectory.points:
         # Creating a RobotState for evaluate the next trajectory
         group_both.clear_pose_targets()
@@ -322,7 +328,7 @@ def placing_both(obj_place, obj_pick):
         group_both.set_pose_target(home_L, left_arm)
         group_both.set_pose_target(placePS[3], right_arm)
         return_home = group_both.plan()
-        t2 = evaluate_time(return_home)
+        t2 = evaluate_time(return_home, info + "t2_returnHomePlaceboth")
         return [(t1 + t2), placePlan, return_home]
     else:
         rospy.logerr('Planning failed')
@@ -349,7 +355,7 @@ def joint_diagram(plan):
     plt.plot(t, j5_l, 'yo-')
     plt.plot(t, j6_l, 'ko-')
     plt.grid()
-    # plt.legend()
+    print(t[-1])
     plt.show()
 
 
@@ -382,23 +388,22 @@ def run():
     home()
 
     # # Evaluate the time for the LEFT arm cycle
-    (t1_L, pick_L, homing_L) = picking(T1, left_arm)
+    (t1_L, pick_L, homing_L) = picking(T1, left_arm, info="pick1_L\t")
     home_robotstate = create_robotstate(homing_L)
     group_both.set_start_state(home_robotstate)
-    (t2_L, place_L, return_home_L) = placing(T1)
+    (t2_L, place_L, return_home_L) = placing(T1, info="place1_L\t")
     # Create the initial state after placing the tube
     return_home_L_state = create_robotstate(return_home_L)
     group_both.set_start_state(return_home_L_state)
     # 2nd test tube
-    (t3_L, pick2_L, homing_L2) = picking(T2, left_arm)
+    (t3_L, pick2_L, homing_L2) = picking(T2, left_arm, info="pick2_L\t")
     home2_robotstate = create_robotstate(homing_L2)
     group_both.set_start_state(home2_robotstate)
-    (t4_L, place2_L, return_home2_L) = placing(T2)
+    (t4_L, place2_L, return_home2_L) = placing(T2, "place2_L\t")
     duration_L = t1_L + t2_L + t3_L + t4_L
 
     # # Evaluate the time for the RIGHT arm cycle: pick + buffer + pick2 + place
-    (t1_R, pick_R, buffer_R) = picking(T1, right_arm)
-
+    (t1_R, pick_R, buffer_R) = picking(T1, right_arm, info="pick1_R\t")
     buffer_R_state = create_robotstate(buffer_R)
     # Picking from buffer for left arm
     group_both.set_start_state(buffer_R_state)
@@ -407,7 +412,7 @@ def run():
     group_both.set_pose_target(home_R, right_arm)
     # Planning the exchange
     buffer_exchange = group_both.plan()
-    t2_R = evaluate_time(buffer_exchange)
+    t2_R = evaluate_time(buffer_exchange, info="buffer_exchange_t2_R\t")
 
     buffer_L_state = create_robotstate(buffer_exchange)
     # Picking from buffer for left arm
@@ -416,7 +421,7 @@ def run():
     group_both.set_pose_target(home_L, left_arm)
     # Planning the homing of left arm
     homing2_L = group_both.plan()
-    t3_R = evaluate_time(homing2_L)
+    t3_R = evaluate_time(homing2_L, info="homing_left_arm_t3_R\t")
     homing_L_state = create_robotstate(homing2_L)
     group_both.set_start_state(homing_L_state)
     # Picking the second test tube and placing the first in mean while
@@ -429,10 +434,10 @@ def run():
     group_both.set_pose_target(home_R, right_arm)
     # Planning the exchange
     buffer_exchange2 = group_both.plan()
-    t5_R = evaluate_time(buffer_exchange2)
+    t5_R = evaluate_time(buffer_exchange2, info="exchange2_t5_R\t")
     placing2 = create_robotstate(buffer_exchange2)
     group_both.set_start_state(placing2)
-    (t6_R, place_R2, return_home_R2) = placing(T2)
+    (t6_R, place_R2, return_home_R2) = placing(T2, "place_exchange_t6_R\t")
 
     # Evaluation of the time for Right arm
     duration_R = t1_R + t2_R + t3_R + t4_R + t5_R + t6_R
@@ -528,7 +533,6 @@ def run():
 
     joint_diagram(pick_L)
     joint_diagram(homing_L)
-    joint_diagram(place_L)
     joint_diagram(place_L)
     joint_diagram(return_home_L)
     joint_diagram(pick2_L)
