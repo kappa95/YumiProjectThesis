@@ -138,3 +138,6 @@ dmypy.json
 
 # ignore matlab files
 *.m
+
+# ignore  astupid test file
+yumi_cpp_test.cpp
