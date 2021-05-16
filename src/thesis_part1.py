@@ -44,10 +44,10 @@ rospy.sleep(1.0)
 
 group_both = MoveGroupCommander("fede_both")
 group_both.set_pose_reference_frame("yumi_body")
-group_both.set_planner_id("RRT")
-group_both.set_planning_time(20)
+group_both.set_planner_id("RRTstar")
+group_both.set_planning_time(15)
 group_both.set_num_planning_attempts(10)
-group_both.allow_replanning(True)
+group_both.allow_replanning(False)  # Allow the replanning if there are changes in environment
 
 group_right = MoveGroupCommander("right_arm")
 group_right.set_pose_reference_frame("yumi_body")
@@ -355,8 +355,52 @@ def joint_diagram(plan):
     plt.plot(t, j5_l, 'yo-')
     plt.plot(t, j6_l, 'ko-')
     plt.grid()
-    print(t[-1])
+    plt.title("Joint positions - left arm")
+    plt.legend(['j1', 'j2', 'j7', 'j3', 'j4', 'j5', 'j6'], loc='best')
     plt.show()
+    plt.clf()
+    v1_l = [jj.velocities[0] for jj in points]
+    v2_l = [jj.velocities[1] for jj in points]
+    v7_l = [jj.velocities[2] for jj in points]
+    v3_l = [jj.velocities[3] for jj in points]
+    v4_l = [jj.velocities[4] for jj in points]
+    v5_l = [jj.velocities[5] for jj in points]
+    v6_l = [jj.velocities[6] for jj in points]
+    plt.plot(
+        t, v1_l, 'bo-',
+        t, v2_l, 'go-',
+        t, v7_l, 'ro-',
+        t, v3_l, 'co-',
+        t, v4_l, 'mo-',
+        t, v5_l, 'yo-',
+        t, v6_l, 'ko-'
+    )
+    plt.grid()
+    plt.title("Joint speed - left arm")
+    plt.legend(['j1', 'j2', 'j7', 'j3', 'j4', 'j5', 'j6'], loc='best')
+    plt.show()
+    plt.clf()
+    a1_l = [jj.accelerations[0] for jj in points]
+    a2_l = [jj.accelerations[1] for jj in points]
+    a7_l = [jj.accelerations[2] for jj in points]
+    a3_l = [jj.accelerations[3] for jj in points]
+    a4_l = [jj.accelerations[4] for jj in points]
+    a5_l = [jj.accelerations[5] for jj in points]
+    a6_l = [jj.accelerations[6] for jj in points]
+    plt.plot(
+        t, a1_l, 'bo-',
+        t, a2_l, 'go-',
+        t, a7_l, 'ro-',
+        t, a3_l, 'co-',
+        t, a4_l, 'mo-',
+        t, a5_l, 'yo-',
+        t, a6_l, 'ko-'
+    )
+    plt.grid()
+    plt.title("Joint speed - left arm")
+    plt.legend(['j1', 'j2', 'j7', 'j3', 'j4', 'j5', 'j6'], loc='best')
+    plt.show()
+    print("end time: {}".format(t[-1]))
 
 
 def run():
