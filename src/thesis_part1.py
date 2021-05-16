@@ -42,11 +42,12 @@ scene = PlanningSceneInterface()
 mpr = MotionPlanRequest()
 rospy.sleep(1.0)
 
+planner = "PRMstar"
 group_both = MoveGroupCommander("fede_both")
 group_both.set_pose_reference_frame("yumi_body")
-group_both.set_planner_id("RRTstar")
-group_both.set_planning_time(15)
-group_both.set_num_planning_attempts(10)
+group_both.set_planner_id(planner)
+group_both.set_planning_time(20)
+group_both.set_num_planning_attempts(100)
 group_both.allow_replanning(False)  # Allow the replanning if there are changes in environment
 
 group_right = MoveGroupCommander("right_arm")
@@ -335,8 +336,8 @@ def placing_both(obj_place, obj_pick, info=''):
         pass
 
 
-def joint_diagram(plan):
-    # type: (RobotTrajectory) -> None
+def joint_diagram(plan, info=''):
+    # type: (RobotTrajectory, str) -> None
     points = [p for p in plan.joint_trajectory.points]  # type: List[JointTrajectoryPoint]
     # For each point, I separate each joint position
     t = [tt.time_from_start.to_sec() for tt in points]
@@ -355,7 +356,7 @@ def joint_diagram(plan):
     plt.plot(t, j5_l, 'yo-')
     plt.plot(t, j6_l, 'ko-')
     plt.grid()
-    plt.title("Joint positions - left arm")
+    plt.title("Joint positions - left arm - plan: {}".format(info))
     plt.legend(['j1', 'j2', 'j7', 'j3', 'j4', 'j5', 'j6'], loc='best')
     plt.show()
     plt.clf()
@@ -376,7 +377,7 @@ def joint_diagram(plan):
         t, v6_l, 'ko-'
     )
     plt.grid()
-    plt.title("Joint speed - left arm")
+    plt.title("Joint speed - left arm - plan: {}".format(info))
     plt.legend(['j1', 'j2', 'j7', 'j3', 'j4', 'j5', 'j6'], loc='best')
     plt.show()
     plt.clf()
@@ -397,7 +398,7 @@ def joint_diagram(plan):
         t, a6_l, 'ko-'
     )
     plt.grid()
-    plt.title("Joint speed - left arm")
+    plt.title("Joint acceleration - left arm - plan: {}".format(info))
     plt.legend(['j1', 'j2', 'j7', 'j3', 'j4', 'j5', 'j6'], loc='best')
     plt.show()
     print("end time: {}".format(t[-1]))
@@ -575,14 +576,15 @@ def run():
         group_both.execute(return_home2_L)
         group_both.stop()
 
-    joint_diagram(pick_L)
-    joint_diagram(homing_L)
-    joint_diagram(place_L)
-    joint_diagram(return_home_L)
-    joint_diagram(pick2_L)
-    joint_diagram(homing_L2)
-    joint_diagram(place2_L)
-    joint_diagram(return_home2_L)
+    # Representing data
+    joint_diagram(pick_L, "pick_L")
+    joint_diagram(homing_L, "homing_L")
+    joint_diagram(place_L, "place_L")
+    joint_diagram(return_home_L, "return_home_L")
+    joint_diagram(pick2_L, "pick2_L")
+    joint_diagram(homing_L2, "homing_L2")
+    joint_diagram(place2_L, "place2_L")
+    joint_diagram(return_home2_L, "return_home2_L")
 
     # # Save the plans for a future analysis
     # Save the LEFT plan
