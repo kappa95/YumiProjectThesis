@@ -13,13 +13,15 @@ from visualization_msgs.msg import MarkerArray, Marker
 from rospy_message_converter import message_converter
 import sys
 import tf
-import os
+from os import path
+from time import strftime, localtime
 import yaml
 from geometry_msgs.msg import *
 from yumi_utils import PI, gripper_effort, LEFT, RIGHT
 from yumi_hw.srv import *
 from trac_ik_python.trac_ik import IK
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure, Axes, rcParams
 
 # from moveit_msgs.msg import MoveItErrorCodes
 #
@@ -30,7 +32,9 @@ import matplotlib.pyplot as plt
 #     if not n[:1] == '_':
 #         code = MoveItErrorCodes.__dict__[n]
 #         moveit_error_dict[code] = n
-
+# Set Latex font
+rcParams['text.usetex'] = True
+rcParams['text.latex.unicode'] = True
 # Initialization of Moveit
 rospy.loginfo('Starting the Initialization')
 roscpp_initialize(sys.argv)
@@ -42,7 +46,7 @@ scene = PlanningSceneInterface()
 mpr = MotionPlanRequest()
 rospy.sleep(1.0)
 
-planner = "PRMstar"
+planner = "RRT"
 group_both = MoveGroupCommander("fede_both")
 group_both.set_pose_reference_frame("yumi_body")
 group_both.set_planner_id(planner)
@@ -73,6 +77,9 @@ sol_ik = ik_solver_right.get_ik(
 )
 
 print(sol_ik)
+
+# Path for saving the images:
+images_path = path.join(path.expanduser("~"), "Thesis/Images/{}/".format(planner))
 
 # Publish the trajectory on Rviz
 # rospy.Publisher('/move_group/display_planned_path', moveit_msgs.msg.DisplayTrajectory, queue_size=20)
@@ -339,6 +346,16 @@ def placing_both(obj_place, obj_pick, info=''):
 def joint_diagram(plan, info=''):
     # type: (RobotTrajectory, str) -> None
     points = [p for p in plan.joint_trajectory.points]  # type: List[JointTrajectoryPoint]
+    # Create an object figure subplot
+    fig, axes = plt.subplots(3, sharex=True)  # type: Figure, List[Axes]
+    # Get width and height
+    (width_fig, height_fig) = rcParams["figure.figsize"]
+    # Get hspace between subplots + 5%
+    hspace = rcParams["figure.subplot.hspace"] + 0.10
+    rospy.loginfo("hspace: {}".format(hspace))
+    # Add half inch to the figure's size
+    fig.set_size_inches(width_fig + 0.8, height_fig + 1)
+    fig.subplots_adjust(hspace=hspace)
     # For each point, I separate each joint position
     t = [tt.time_from_start.to_sec() for tt in points]
     j1_l = [jj.positions[0] for jj in points]
@@ -348,18 +365,23 @@ def joint_diagram(plan, info=''):
     j4_l = [jj.positions[4] for jj in points]
     j5_l = [jj.positions[5] for jj in points]
     j6_l = [jj.positions[6] for jj in points]
-    plt.plot(t, j1_l, 'bo-')
-    plt.plot(t, j2_l, 'go-')
-    plt.plot(t, j7_l, 'ro-')
-    plt.plot(t, j3_l, 'co-')
-    plt.plot(t, j4_l, 'mo-')
-    plt.plot(t, j5_l, 'yo-')
-    plt.plot(t, j6_l, 'ko-')
-    plt.grid()
-    plt.title("Joint positions - left arm - plan: {}".format(info))
-    plt.legend(['j1', 'j2', 'j7', 'j3', 'j4', 'j5', 'j6'], loc='best')
-    plt.show()
-    plt.clf()
+    axes[0].plot(
+        t, j1_l, 'bo-',
+        t, j2_l, 'go-',
+        t, j7_l, 'ro-',
+        t, j3_l, 'co-',
+        t, j4_l, 'mo-',
+        t, j5_l, 'yo-',
+        t, j6_l, 'ko-'
+    )
+    axes[0].grid()
+    axes[0].set_title("Joint positions - left arm - plan: {}".format(info))
+    axes[0].legend(['j1', 'j2', 'j7', 'j3', 'j4', 'j5', 'j6'], loc='best', bbox_to_anchor=(1.001, 1))
+    # plt.savefig(images_path + "J_position_left_arm_{}_{}".format(info, strftime("%d_%b-%H_%M", localtime())),
+    #             format='svg',
+    #             transparent=False
+    #             )
+    # plt.clf()
     v1_l = [jj.velocities[0] for jj in points]
     v2_l = [jj.velocities[1] for jj in points]
     v7_l = [jj.velocities[2] for jj in points]
@@ -367,7 +389,7 @@ def joint_diagram(plan, info=''):
     v4_l = [jj.velocities[4] for jj in points]
     v5_l = [jj.velocities[5] for jj in points]
     v6_l = [jj.velocities[6] for jj in points]
-    plt.plot(
+    axes[1].plot(
         t, v1_l, 'bo-',
         t, v2_l, 'go-',
         t, v7_l, 'ro-',
@@ -376,11 +398,15 @@ def joint_diagram(plan, info=''):
         t, v5_l, 'yo-',
         t, v6_l, 'ko-'
     )
-    plt.grid()
-    plt.title("Joint speed - left arm - plan: {}".format(info))
-    plt.legend(['j1', 'j2', 'j7', 'j3', 'j4', 'j5', 'j6'], loc='best')
-    plt.show()
-    plt.clf()
+    axes[1].grid()
+    axes[1].set_title("Joint speed - left arm - plan: {}".format(info))
+    # axes[1].legend(['j1', 'j2', 'j7', 'j3', 'j4', 'j5', 'j6'], loc='best')
+    # plt.show()
+    # plt.savefig(images_path + "J_speed_left_arm_{}_{}".format(info, strftime("%d_%b-%H_%M", localtime())),
+    #             format='svg',
+    #             transparent=False
+    #             )
+    # plt.clf()
     a1_l = [jj.accelerations[0] for jj in points]
     a2_l = [jj.accelerations[1] for jj in points]
     a7_l = [jj.accelerations[2] for jj in points]
@@ -388,7 +414,7 @@ def joint_diagram(plan, info=''):
     a4_l = [jj.accelerations[4] for jj in points]
     a5_l = [jj.accelerations[5] for jj in points]
     a6_l = [jj.accelerations[6] for jj in points]
-    plt.plot(
+    axes[2].plot(
         t, a1_l, 'bo-',
         t, a2_l, 'go-',
         t, a7_l, 'ro-',
@@ -397,11 +423,20 @@ def joint_diagram(plan, info=''):
         t, a5_l, 'yo-',
         t, a6_l, 'ko-'
     )
-    plt.grid()
-    plt.title("Joint acceleration - left arm - plan: {}".format(info))
-    plt.legend(['j1', 'j2', 'j7', 'j3', 'j4', 'j5', 'j6'], loc='best')
-    plt.show()
-    print("end time: {}".format(t[-1]))
+    axes[2].grid()
+    axes[2].set_title("Joint acceleration - left arm - plan: {}".format(info))
+    # axes[2].legend(['j1', 'j2', 'j7', 'j3', 'j4', 'j5', 'j6'], loc='best')
+    # plt.show()
+    # plt.savefig(images_path + "J_acceleration_left_arm_{}_{}".format(info, strftime("%d_%b-%H_%M", localtime())),
+    #             format='svg',
+    #             transparent=False
+    #             )
+    # print("end time: {}".format(t[-1]))
+    fig.savefig(images_path + "J_left_arm_{}_{}".format(info, strftime("%d_%b-%H_%M", localtime())),
+                format='svg',
+                transparent=False
+                )
+    # plt.show()
 
 
 def run():
@@ -576,7 +611,7 @@ def run():
         group_both.execute(return_home2_L)
         group_both.stop()
 
-    # Representing data
+    # Representing data and saving data
     joint_diagram(pick_L, "pick_L")
     joint_diagram(homing_L, "homing_L")
     joint_diagram(place_L, "place_L")
@@ -585,19 +620,6 @@ def run():
     joint_diagram(homing_L2, "homing_L2")
     joint_diagram(place2_L, "place2_L")
     joint_diagram(return_home2_L, "return_home2_L")
-
-    # # Save the plans for a future analysis
-    # Save the LEFT plan
-    # left_file = os.path.join(os.path.relpath('plans', start=os.curdir), 'plan_L.yaml')
-    # with open(left_file, 'w') as file_save:
-    #     yaml.dump(pick_L, file_save, default_flow_style=True)
-    #     yaml.dump(homing_L, file_save, default_flow_style=True)
-    #     yaml.dump(place_L, file_save, default_flow_style=True)
-    #     yaml.dump(return_home_L, file_save, default_flow_style=True)
-    #     yaml.dump(pick2_L, file_save, default_flow_style=True)
-    #     yaml.dump(homing2_L, file_save, default_flow_style=True)
-    #     yaml.dump(place2_L, file_save, default_flow_style=True)
-    #     yaml.dump(return_home2_L, file_save, default_flow_style=True)
 
 
 if __name__ == '__main__':
