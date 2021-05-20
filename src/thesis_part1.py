@@ -10,12 +10,11 @@ from moveit_msgs.msg import *
 from moveit_commander import *
 from trajectory_msgs.msg import JointTrajectoryPoint
 from visualization_msgs.msg import MarkerArray, Marker
-from rospy_message_converter import message_converter
+# from rospy_message_converter import message_converter
 import sys
 import tf
 from os import path
 from time import strftime, localtime
-import yaml
 from geometry_msgs.msg import *
 from yumi_utils import PI, gripper_effort, LEFT, RIGHT
 from yumi_hw.srv import *
@@ -32,6 +31,7 @@ from matplotlib.figure import Figure, Axes, rcParams
 #     if not n[:1] == '_':
 #         code = MoveItErrorCodes.__dict__[n]
 #         moveit_error_dict[code] = n
+
 # Set Latex font
 rcParams['text.usetex'] = True
 rcParams['text.latex.unicode'] = True
@@ -39,7 +39,7 @@ rcParams['text.latex.unicode'] = True
 rospy.loginfo('Starting the Initialization')
 roscpp_initialize(sys.argv)
 # Initialization of the Node
-rospy.init_node('test', anonymous=True, log_level=rospy.DEBUG)
+rospy.init_node('test', anonymous=True, log_level=rospy.INFO)
 
 robot = RobotCommander()
 scene = PlanningSceneInterface()
@@ -350,11 +350,10 @@ def joint_diagram(plan, info=''):
     fig, axes = plt.subplots(3, sharex=True)  # type: Figure, List[Axes]
     # Get width and height
     (width_fig, height_fig) = rcParams["figure.figsize"]
-    # Get hspace between subplots + 5%
-    hspace = rcParams["figure.subplot.hspace"] + 0.10
-    rospy.loginfo("hspace: {}".format(hspace))
+    # Get hspace between subplots + 20%
+    hspace = rcParams["figure.subplot.hspace"] + 0.20
     # Add half inch to the figure's size
-    fig.set_size_inches(width_fig + 0.8, height_fig + 1)
+    fig.set_size_inches(width_fig + 1, height_fig + 1.1)
     fig.subplots_adjust(hspace=hspace)
     # For each point, I separate each joint position
     t = [tt.time_from_start.to_sec() for tt in points]
@@ -375,13 +374,11 @@ def joint_diagram(plan, info=''):
         t, j6_l, 'ko-'
     )
     axes[0].grid()
-    axes[0].set_title("Joint positions - left arm - plan: {}".format(info))
+    # axes[0].set_title(r"\text{Joint positions - left arm - plan: {0}}".format(info))
+    axes[0].set_title(r"$\textbf{Joint positions - left arm - plan: %s}$" % info)
+    axes[0].set_xlabel(r"$\textit{time (s)}$")
+    axes[0].set_ylabel(r"$q$")
     axes[0].legend(['j1', 'j2', 'j7', 'j3', 'j4', 'j5', 'j6'], loc='best', bbox_to_anchor=(1.001, 1))
-    # plt.savefig(images_path + "J_position_left_arm_{}_{}".format(info, strftime("%d_%b-%H_%M", localtime())),
-    #             format='svg',
-    #             transparent=False
-    #             )
-    # plt.clf()
     v1_l = [jj.velocities[0] for jj in points]
     v2_l = [jj.velocities[1] for jj in points]
     v7_l = [jj.velocities[2] for jj in points]
@@ -399,14 +396,10 @@ def joint_diagram(plan, info=''):
         t, v6_l, 'ko-'
     )
     axes[1].grid()
-    axes[1].set_title("Joint speed - left arm - plan: {}".format(info))
-    # axes[1].legend(['j1', 'j2', 'j7', 'j3', 'j4', 'j5', 'j6'], loc='best')
-    # plt.show()
-    # plt.savefig(images_path + "J_speed_left_arm_{}_{}".format(info, strftime("%d_%b-%H_%M", localtime())),
-    #             format='svg',
-    #             transparent=False
-    #             )
-    # plt.clf()
+    axes[1].set_xlabel(r"$\textit{time (s)}$")
+    axes[1].set_ylabel(r"$\dot{q}$")
+    # axes[1].set_title(r"\text{Joint speed - left arm - plan: {0}}".format(info))
+    axes[1].set_title(r"$\textbf{Joint speed - left arm - plan: %s}$" % info)
     a1_l = [jj.accelerations[0] for jj in points]
     a2_l = [jj.accelerations[1] for jj in points]
     a7_l = [jj.accelerations[2] for jj in points]
@@ -424,19 +417,22 @@ def joint_diagram(plan, info=''):
         t, a6_l, 'ko-'
     )
     axes[2].grid()
-    axes[2].set_title("Joint acceleration - left arm - plan: {}".format(info))
-    # axes[2].legend(['j1', 'j2', 'j7', 'j3', 'j4', 'j5', 'j6'], loc='best')
-    # plt.show()
-    # plt.savefig(images_path + "J_acceleration_left_arm_{}_{}".format(info, strftime("%d_%b-%H_%M", localtime())),
-    #             format='svg',
-    #             transparent=False
-    #             )
+    axes[2].set_xlabel(r"$\textit{time (s)}$")
+    axes[2].set_ylabel(r"$\ddot{q}$")
+    # axes[2].set_title(r"\text{Joint acceleration - left arm - plan: {0}}".format(info))
+    axes[2].set_title(r"$\textbf{Joint acceleration - left arm - plan: %s}$" % info)
     # print("end time: {}".format(t[-1]))
     fig.savefig(images_path + "J_left_arm_{}_{}".format(info, strftime("%d_%b-%H_%M", localtime())),
                 format='svg',
                 transparent=False
                 )
     # plt.show()
+    # Save the timings on a file:
+    with open(path.join(path.expanduser("~"), "Thesis/timings"), "a+") as f:
+        f.write(
+            strftime("%d_%b-%H_%M", localtime()) +
+            "\tPLANNER: {} J_left_arm_{} Time: {}\n".format(planner, info, t[-1])
+        )
 
 
 def run():
@@ -612,14 +608,16 @@ def run():
         group_both.stop()
 
     # Representing data and saving data
-    joint_diagram(pick_L, "pick_L")
-    joint_diagram(homing_L, "homing_L")
-    joint_diagram(place_L, "place_L")
-    joint_diagram(return_home_L, "return_home_L")
-    joint_diagram(pick2_L, "pick2_L")
-    joint_diagram(homing_L2, "homing_L2")
-    joint_diagram(place2_L, "place2_L")
-    joint_diagram(return_home2_L, "return_home2_L")
+    joint_diagram(pick_L, "pick L")
+    joint_diagram(homing_L, "homing L")
+    joint_diagram(place_L, "place L")
+    joint_diagram(return_home_L, "return home L")
+    joint_diagram(pick2_L, "pick2 L")
+    joint_diagram(homing_L2, "homing L2")
+    joint_diagram(place2_L, "place2 L")
+    joint_diagram(return_home2_L, "return home2 L")
+    with open(path.join(path.expanduser("~"), "Thesis/timings"), "a+") as f:
+        f.write("\tTotal time: {}s\n".format(duration_L))
 
 
 if __name__ == '__main__':
