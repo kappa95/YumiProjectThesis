@@ -616,8 +616,11 @@ def run():
     joint_diagram(homing_L2, "homing L2")
     joint_diagram(place2_L, "place2 L")
     joint_diagram(return_home2_L, "return home2 L")
+
+    # Saving the total time in the log file
     with open(path.join(path.expanduser("~"), "Thesis/timings"), "a+") as f:
-        f.write("\tTotal time: {}s\n".format(duration_L))
+        f.write("Total time: {}s\n".format(duration_L))
+        f.write("------------------\n")
 
 
 if __name__ == '__main__':
