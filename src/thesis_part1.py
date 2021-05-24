@@ -5,6 +5,8 @@ New modification: Changed the parameter in the trajectory_execution.launch.xml""
 
 
 from copy import deepcopy
+
+import rospy
 from typing import List
 from moveit_msgs.msg import *
 from moveit_commander import *
@@ -46,12 +48,13 @@ scene = PlanningSceneInterface()
 mpr = MotionPlanRequest()
 rospy.sleep(1.0)
 
-planner = "RRT"
+planner = "RRTstar"
+planning_time = 30
 group_both = MoveGroupCommander("fede_both")
 group_both.set_pose_reference_frame("yumi_body")
 group_both.set_planner_id(planner)
-group_both.set_planning_time(20)
-group_both.set_num_planning_attempts(100)
+group_both.set_planning_time(planning_time)
+group_both.set_num_planning_attempts(1000)
 group_both.allow_replanning(False)  # Allow the replanning if there are changes in environment
 
 group_right = MoveGroupCommander("right_arm")
@@ -232,10 +235,10 @@ def evaluate_time(plan, info=''):
         rospy.loginfo('Estimated time of planning {}: {} s'.format(info, duration))
         return duration
     else:
-        raise RuntimeWarning("Plan is empty")
-        # rospy.logwarn('The plan is empty')
-        # duration = 0.0
-        # return duration
+        # raise RuntimeWarning("Plan is empty")
+        rospy.logwarn('The plan is empty')
+        duration = 2000.0  # penalty
+        return duration
 
 
 def home():
@@ -339,7 +342,7 @@ def placing_both(obj_place, obj_pick, info=''):
         t2 = evaluate_time(return_home, info + "t2_returnHomePlaceboth")
         return [(t1 + t2), placePlan, return_home]
     else:
-        rospy.logerr('Planning failed')
+        rospy.logwarn('Planning failed')
         pass
 
 
@@ -477,135 +480,136 @@ def run():
     group_both.set_start_state(home2_robotstate)
     (t4_L, place2_L, return_home2_L) = placing(T2, "place2_L\t")
     duration_L = t1_L + t2_L + t3_L + t4_L
-
-    # # Evaluate the time for the RIGHT arm cycle: pick + buffer + pick2 + place
-    (t1_R, pick_R, buffer_R) = picking(T1, right_arm, info="pick1_R\t")
-    buffer_R_state = create_robotstate(buffer_R)
-    # Picking from buffer for left arm
-    group_both.set_start_state(buffer_R_state)
-    group_both.clear_pose_targets()
-    group_both.set_pose_target(placePS[3], left_arm)
-    group_both.set_pose_target(home_R, right_arm)
-    # Planning the exchange
-    buffer_exchange = group_both.plan()
-    t2_R = evaluate_time(buffer_exchange, info="buffer_exchange_t2_R\t")
-
-    buffer_L_state = create_robotstate(buffer_exchange)
-    # Picking from buffer for left arm
-    group_both.set_start_state(buffer_L_state)
-    group_both.clear_pose_targets()
-    group_both.set_pose_target(home_L, left_arm)
-    # Planning the homing of left arm
-    homing2_L = group_both.plan()
-    t3_R = evaluate_time(homing2_L, info="homing_left_arm_t3_R\t")
-    homing_L_state = create_robotstate(homing2_L)
-    group_both.set_start_state(homing_L_state)
-    # Picking the second test tube and placing the first in mean while
-    (t4_R, place_R, return_home_R) = placing_both(T1, T2)
-    buffer_second_tube = create_robotstate(return_home_R)
-    # Picking from buffer for left arm
-    group_both.set_start_state(buffer_second_tube)
-    group_both.clear_pose_targets()
-    group_both.set_pose_target(placePS[3], left_arm)
-    group_both.set_pose_target(home_R, right_arm)
-    # Planning the exchange
-    buffer_exchange2 = group_both.plan()
-    t5_R = evaluate_time(buffer_exchange2, info="exchange2_t5_R\t")
-    placing2 = create_robotstate(buffer_exchange2)
-    group_both.set_start_state(placing2)
-    (t6_R, place_R2, return_home_R2) = placing(T2, "place_exchange_t6_R\t")
+    # TODO: Refactor Right motion in functions and class, in this way I can choose which one execute or both of them
+    # # # Evaluate the time for the RIGHT arm cycle: pick + buffer + pick2 + place
+    # (t1_R, pick_R, buffer_R) = picking(T1, right_arm, info="pick1_R\t")
+    # buffer_R_state = create_robotstate(buffer_R)
+    # # Picking from buffer for left arm
+    # group_both.set_start_state(buffer_R_state)
+    # group_both.clear_pose_targets()
+    # group_both.set_pose_target(placePS[3], left_arm)
+    # group_both.set_pose_target(home_R, right_arm)
+    # # Planning the exchange
+    # buffer_exchange = group_both.plan()
+    # t2_R = evaluate_time(buffer_exchange, info="buffer_exchange_t2_R\t")
+    #
+    # buffer_L_state = create_robotstate(buffer_exchange)
+    # # Picking from buffer for left arm
+    # group_both.set_start_state(buffer_L_state)
+    # group_both.clear_pose_targets()
+    # group_both.set_pose_target(home_L, left_arm)
+    # # Planning the homing of left arm
+    # homing2_L = group_both.plan()
+    # t3_R = evaluate_time(homing2_L, info="homing_left_arm_t3_R\t")
+    # homing_L_state = create_robotstate(homing2_L)
+    # group_both.set_start_state(homing_L_state)
+    # # Picking the second test tube and placing the first in mean while
+    # (t4_R, place_R, return_home_R) = placing_both(T1, T2)
+    # buffer_second_tube = create_robotstate(return_home_R)
+    # # Picking from buffer for left arm
+    # group_both.set_start_state(buffer_second_tube)
+    # group_both.clear_pose_targets()
+    # group_both.set_pose_target(placePS[3], left_arm)
+    # group_both.set_pose_target(home_R, right_arm)
+    # # Planning the exchange
+    # buffer_exchange2 = group_both.plan()
+    # t5_R = evaluate_time(buffer_exchange2, info="exchange2_t5_R\t")
+    # placing2 = create_robotstate(buffer_exchange2)
+    # group_both.set_start_state(placing2)
+    # (t6_R, place_R2, return_home_R2) = placing(T2, "place_exchange_t6_R\t")
 
     # Evaluation of the time for Right arm
-    duration_R = t1_R + t2_R + t3_R + t4_R + t5_R + t6_R
+    # duration_R = t1_R + t2_R + t3_R + t4_R + t5_R + t6_R
+
     rospy.loginfo('TOTAL TIME Left: {}s'.format(duration_L))
-    rospy.loginfo('TOTAL TIME Right: {}s'.format(duration_R))
+    # rospy.loginfo('TOTAL TIME Right: {}s'.format(duration_R))
 
-    if duration_R < duration_L:
-        rospy.loginfo('Motion Right wins')
-        # # RIGHT motion
-        # Execute picking
-        group_both.execute(pick_R)
-        group_both.stop()
-        # Attach Test tube
-        T1.attach_object(right_arm)
-        gripper_effort(RIGHT, 10)
-        # Going to the buffer position
-        group_both.execute(buffer_R)
-        group_both.stop()
-        # Open the gripper and detach the object
-        T1.detach_object(right_arm)
-        gripper_effort(RIGHT, -20)
-        # buffer exchange
-        group_both.execute(buffer_exchange)
-        group_both.stop()
-        T1.attach_object(left_arm)
-        gripper_effort(LEFT, 10)
-        # homing the L
-        group_both.execute(homing2_L)
-        group_both.stop()
-        # placing
-        group_both.execute(place_R)
-        group_both.stop()
-        T1.detach_object(left_arm)
-        gripper_effort(LEFT, -20)
-        T2.attach_object(right_arm)
-        gripper_effort(RIGHT, 10)
-        # return to home
-        group_both.execute(return_home_R)
-        group_both.stop()
-        T2.detach_object(right_arm)
-        gripper_effort(RIGHT, -20)
-        # buffer exchange
-        group_both.execute(buffer_exchange2)
-        group_both.stop()
-        # Attach object and close gripper
-        T2.attach_object(left_arm)
-        gripper_effort(LEFT, 10)
-        group_both.execute(place_R2)
-        group_both.stop()
-        # Detach object and open gripper
-        T2.detach_object(left_arm)
-        gripper_effort(LEFT, -20)
-        group_both.execute(return_home_R2)
-        group_both.stop()
-    else:
-        rospy.loginfo('Motion Left wins')
-        # # LEFT motion
-        # Execute Picking
-        group_both.execute(pick_L)
-        group_both.stop()
+    # if duration_R < duration_L:
+    #     rospy.loginfo('Motion Right wins')
+    #     # # RIGHT motion
+    #     # Execute picking
+    #     group_both.execute(pick_R)
+    #     group_both.stop()
+    #     # Attach Test tube
+    #     T1.attach_object(right_arm)
+    #     gripper_effort(RIGHT, 10)
+    #     # Going to the buffer position
+    #     group_both.execute(buffer_R)
+    #     group_both.stop()
+    #     # Open the gripper and detach the object
+    #     T1.detach_object(right_arm)
+    #     gripper_effort(RIGHT, -20)
+    #     # buffer exchange
+    #     group_both.execute(buffer_exchange)
+    #     group_both.stop()
+    #     T1.attach_object(left_arm)
+    #     gripper_effort(LEFT, 10)
+    #     # homing the L
+    #     group_both.execute(homing2_L)
+    #     group_both.stop()
+    #     # placing
+    #     group_both.execute(place_R)
+    #     group_both.stop()
+    #     T1.detach_object(left_arm)
+    #     gripper_effort(LEFT, -20)
+    #     T2.attach_object(right_arm)
+    #     gripper_effort(RIGHT, 10)
+    #     # return to home
+    #     group_both.execute(return_home_R)
+    #     group_both.stop()
+    #     T2.detach_object(right_arm)
+    #     gripper_effort(RIGHT, -20)
+    #     # buffer exchange
+    #     group_both.execute(buffer_exchange2)
+    #     group_both.stop()
+    #     # Attach object and close gripper
+    #     T2.attach_object(left_arm)
+    #     gripper_effort(LEFT, 10)
+    #     group_both.execute(place_R2)
+    #     group_both.stop()
+    #     # Detach object and open gripper
+    #     T2.detach_object(left_arm)
+    #     gripper_effort(LEFT, -20)
+    #     group_both.execute(return_home_R2)
+    #     group_both.stop()
+    # else:
+    rospy.loginfo('Motion Left wins')
+    # # LEFT motion
+    # Execute Picking
+    group_both.execute(pick_L)
+    group_both.stop()
 
-        # Attach Test tube
-        T1.attach_object(left_arm)
-        gripper_effort(LEFT, 10)
-        group_both.execute(homing_L)
-        group_both.stop()
+    # Attach Test tube
+    T1.attach_object(left_arm)
+    gripper_effort(LEFT, 10)
+    group_both.execute(homing_L)
+    group_both.stop()
 
-        # Execute Placing
-        group_both.execute(place_L)
-        group_both.stop()
-        T1.detach_object(left_arm)
-        gripper_effort(LEFT, -20)
-        group_both.execute(return_home_L)
-        group_both.stop()
-        # 2nd tube
-        # Execute Picking
-        group_both.execute(pick2_L)
-        group_both.stop()
+    # Execute Placing
+    group_both.execute(place_L)
+    group_both.stop()
+    T1.detach_object(left_arm)
+    gripper_effort(LEFT, -20)
+    group_both.execute(return_home_L)
+    group_both.stop()
+    # 2nd tube
+    # Execute Picking
+    group_both.execute(pick2_L)
+    group_both.stop()
 
-        # Attach Test tube
-        T2.attach_object(left_arm)
-        gripper_effort(LEFT, 10)
-        group_both.execute(homing_L2)
-        group_both.stop()
+    # Attach Test tube
+    T2.attach_object(left_arm)
+    gripper_effort(LEFT, 10)
+    group_both.execute(homing_L2)
+    group_both.stop()
 
-        # Execute Placing
-        group_both.execute(place2_L)
-        group_both.stop()
-        T2.detach_object(left_arm)
-        gripper_effort(LEFT, -20)
-        group_both.execute(return_home2_L)
-        group_both.stop()
+    # Execute Placing
+    group_both.execute(place2_L)
+    group_both.stop()
+    T2.detach_object(left_arm)
+    gripper_effort(LEFT, -20)
+    group_both.execute(return_home2_L)
+    group_both.stop()
 
     # Representing data and saving data
     joint_diagram(pick_L, "pick L")
@@ -620,6 +624,7 @@ def run():
     # Saving the total time in the log file
     with open(path.join(path.expanduser("~"), "Thesis/timings"), "a+") as f:
         f.write("Total time: {}s\n".format(duration_L))
+        f.write("Planner settings: time for planning: {}\n".format(planning_time))
         f.write("------------------\n")
 
 
